@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Pro | Admin Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon-admin.svg">
+    <style>
+        /* Modern Apple-style Glassmorphic Theme */
+        :root {
+            --bg-dark: #050505;
+            --bg-card: rgba(26, 26, 28, 0.6);
+            --amber-start: #FF7B00;
+            --amber-end: #FFB000;
+            --text-main: #F5F5F7;
+            --text-muted: #86868B;
+            --border-light: rgba(255, 255, 255, 0.08);
+            --amber-glow: rgba(255, 123, 0, 0.15);
+            --danger: #FF453A;
+            --success: #32D74B;
+            --cancel: #FF9F0A;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at top right, rgba(255,123,0,0.05), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(255,176,0,0.05), transparent 40%);
+            color: var(--text-main);
+            overflow-x: hidden;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Typography Utilities */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: rgba(15, 15, 15, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-light);
+            position: fixed;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 0;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+        
+        .sidebar h2 {
+            margin: 0 0 40px 30px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            font-size: 1.5rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            text-align: left;
+            padding: 16px 30px;
+            font-size: 1.05rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, var(--amber-start), var(--amber-end));
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+            transform-origin: center;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-btn.active {
+            color: #fff;
+            background: linear-gradient(90deg, var(--amber-glow) 0%, transparent 100%);
+        }
+
+        .nav-btn.active::before {
+            transform: scaleY(1);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            padding: 50px 80px;
+            width: calc(100% - 260px);
+            box-sizing: border-box;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        h1 { margin: 0; font-weight: 600; font-size: 2.5rem; letter-spacing: -1px; }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 30px;
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .btn-amber {
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            color: #000;
+            border: none;
+        }
+
+        .btn-amber:hover {
+            box-shadow: 0 5px 20px rgba(255, 123, 0, 0.4);
+            background: linear-gradient(135deg, #FF8C19, #FFB819);
+        }
+
+        .btn-danger { color: var(--danger); border-color: rgba(255,69,58,0.3); }
+        .btn-danger:hover { background: rgba(255,69,58,0.1); border-color: var(--danger); }
+
+        /* Sync Indicator */
+        .sync-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--success);
+            background: rgba(50, 215, 75, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(50, 215, 75, 0.2);
+        }
+        .sync-dot {
+            width: 8px; height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(50, 215, 75, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(50, 215, 75, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(50, 215, 75, 0); }
+        }
+
+        /* Grid & Cards */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 30px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 123, 0, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 40px var(--amber-glow);
+        }
+
+        .card h3 { margin: 0 0 10px 0; font-size: 1.4rem; font-weight: 600; }
+        .card p { margin: 8px 0; font-size: 0.95rem; color: var(--text-muted); }
+        .card strong { color: var(--text-main); font-weight: 500; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+            border: 1px solid transparent;
+        }
+        
+        .status-pending { background: rgba(255, 176, 0, 0.1); color: var(--amber-end); border-color: rgba(255, 176, 0, 0.2); }
+        .status-active { background: rgba(50, 215, 75, 0.1); color: var(--success); border-color: rgba(50, 215, 75, 0.2); }
+        .status-rejected { background: rgba(255, 69, 58, 0.1); color: var(--danger); border-color: rgba(255, 69, 58, 0.2); }
+        .status-cancelled { background: rgba(255, 159, 10, 0.1); color: var(--cancel); border-color: rgba(255, 159, 10, 0.2); }
+        .status-completed { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--border-light); }
+
+        .card-actions {
+            margin-top: auto;
+            padding-top: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .card-actions button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-main);
+        }
+
+        .card-actions button:hover { background: rgba(255,255,255,0.1); }
+        
+        .action-approve { border-color: rgba(50, 215, 75, 0.3) !important; color: var(--success) !important; }
+        .action-approve:hover { background: rgba(50, 215, 75, 0.1) !important; border-color: var(--success) !important; }
+
+        .action-reject { border-color: rgba(255, 69, 58, 0.3) !important; color: var(--danger) !important; }
+        .action-reject:hover { background: rgba(255, 69, 58, 0.1) !important; border-color: var(--danger) !important; }
+
+        .action-amber { border-color: rgba(255, 123, 0, 0.4) !important; color: var(--amber-end) !important; }
+        .action-amber:hover { background: rgba(255, 123, 0, 0.1) !important; border-color: var(--amber-start) !important; }
+
+        /* Login Modal Overlay */
+        #login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .login-box {
+            background: var(--bg-card);
+            padding: 50px;
+            border-radius: 30px;
+            border: 1px solid var(--border-light);
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 14px;
+            margin: 25px 0;
+            border-radius: 14px;
+            border: 1px solid var(--border-light);
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .login-box input:focus { border-color: var(--amber-start); }
+        .login-box button { width: 100%; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Simple Auth Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="margin-top: 0;">Admin <span class="text-gradient">Access</span></h2>
+            <input type="password" id="admin-pass" placeholder="Enter password (admin123)">
+            <button class="btn btn-amber" onclick="login()">Enter Dashboard</button>
+            <p id="login-error" style="color:var(--danger); display:none; font-size: 0.85rem; margin-top:15px;">Incorrect password.</p>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Visual <span class="text-gradient">Pro</span></h2>
+        <button class="nav-btn active" data-view="Pending">Pending Requests</button>
+        <button class="nav-btn" data-view="Active">Active Projects</button>
+        <button class="nav-btn" data-view="Completed">Completed Projects</button>
+        <button class="nav-btn" data-view="Rejected">Rejected</button>
+        <button class="nav-btn" data-view="Cancelled">Cancelled</button>
+    </div>
+
+    <!-- Main Engine -->
+    <div class="main-content">
+        <div class="header-actions">
+            <h1 id="view-title">Pending Requests</h1>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <div class="sync-indicator" id="sync-status">
+                    <div class="sync-dot"></div> Live Sync
+                </div>
+                <button class="btn btn-danger" onclick="bulkDelete()">Delete View</button>
+            </div>
+        </div>
+
+        <div id="loading" style="display:none; color: var(--text-muted); font-size: 1.1rem;">Loading project data...</div>
+        <div class="cards-grid" id="cards-container">
+            <!-- Cards injected via JS -->
+        </div>
+    </div>
+
+    <script>
+        let currentView = 'Pending';
+        let allProjects = [];
+        let sseConnection = null;
+
+        // Auth
+        const login = () => {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'admin123') { 
+                document.getElementById('login-overlay').style.display = 'none';
+                fetchData();
+                initSSE(); // Start Real-Time Listener
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        };
+
+        // Initialize Server-Sent Events
+        const initSSE = () => {
+            if (sseConnection) return;
+            sseConnection = new EventSource('/api/events');
+            
+            // Listen for any backend broadcasts
+            sseConnection.onmessage = (e) => {
+                // If the backend emits a generic message, re-fetch
+                console.log("Real-time update received.");
+                fetchData();
+            };
+
+            // Can specifically listen for custom event names
+            sseConnection.addEventListener('project_received', (e) => {
+                console.log("New Project Received!", e.data);
+                fetchData();
+            });
+
+            sseConnection.addEventListener('project_updated', (e) => {
+                console.log("Project Updated!", e.data);
+                fetchData();
+            });
+
+            sseConnection.addEventListener('project_deleted', (e) => {
+                console.log("Project Deleted!", e.data);
+                fetchData();
+            });
+
+            sseConnection.onerror = () => {
+                document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger)">Sync Offline</span>';
+                document.getElementById('sync-status').style.background = 'rgba(255, 69, 58, 0.1)';
+                document.getElementById('sync-status').style.borderColor = 'rgba(255, 69, 58, 0.2)';
+            }
+        };
+
+        // Navigation Bindings
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentView = e.target.getAttribute('data-view');
+                document.getElementById('view-title').textContent = e.target.textContent;
+                renderCards();
+            });
+        });
+
+        // Fetch Data explicitly
+        const fetchData = async () => {
+            if(allProjects.length === 0) document.getElementById('loading').style.display = 'block';
+            
+            try {
+                const res = await fetch('/api/admin/projects', {
+                    headers: { 'Authorization': 'Bearer admin123' }
+                });
+                if(res.ok) {
+                    allProjects = await res.json();
+                    renderCards();
+                } else {
+                    console.error('Session expired or unauthorized');
+                }
+            } catch (err) {
+                console.error('Connection Error', err);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+
+        // Status Map
+        const getStatusClass = (status) => {
+            if (status === 'Request Received') return 'status-pending';
+            if (['Project Started', 'Filming in Progress', 'Editing in Progress'].includes(status)) return 'status-active';
+            if (status === 'Project Completed') return 'status-completed';
+            if (status === 'Project Rejected') return 'status-rejected';
+            if (status === 'Project Cancelled') return 'status-cancelled';
+            return 'status-pending';
+        };
+
+        const belongsToView = (p, view) => {
+            if (view === 'Pending') return p.status === 'Request Received';
+            if (view === 'Active') return ['Project Started', 'Filming in Progress', 'Editing in Progress'].includes(p.status);
+            if (view === 'Completed') return p.status === 'Project Completed';
+            if (view === 'Rejected') return p.status === 'Project Rejected';
+            if (view === 'Cancelled') return p.status === 'Project Cancelled';
+            return false;
+        };
+
+        // Render Cards
+        const renderCards = () => {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            
+            const filtered = allProjects.filter(p => belongsToView(p, currentView));
+            // Sort by latest created
+            filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="color:var(--text-muted); font-size:1.1rem;">No projects found in this view.</p>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const dateCreated = new Date(p.createdAt).toLocaleDateString();
+                const viewUrl = `http://localhost:3000/project-status?id=${p.id}`;
+
+                let actionsHTML = '';
+                if (currentView === 'Pending') {
+                    actionsHTML = `
+                        <button class="action-approve" onclick="updateStatus('${p.id}', 'Project Started')">Approve Request</button>
+                        <button class="action-reject" onclick="updateStatus('${p.id}', 'Project Rejected')">Reject</button>
+                    `;
+                } else if (currentView === 'Active') {
+                    actionsHTML = `
+                        ${p.status === 'Project Started' ? `<button class="action-amber" onclick="updateStatus('${p.id}', 'Filming in Progress')">Start Filming</button>` : ''}
+                        ${p.status === 'Filming in Progress' ? `<button class="action-amber" onclick="updateStatus('${p.id}', 'Editing in Progress')">Start Editing</button>` : ''}
+                        ${p.status === 'Editing in Progress' ? `<button class="action-approve" onclick="updateStatus('${p.id}', 'Project Completed')">Complete</button>` : ''}
+                        <button class="action-reject" onclick="updateStatus('${p.id}', 'Project Cancelled')">Cancel</button>
+                    `;
+                }
+                actionsHTML += `<button onclick="deleteProject('${p.id}')">Delete</button>`;
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <span class="status-badge ${getStatusClass(p.status)}">${p.status}</span>
+                    <h3>${p.projectTitle || p.name}</h3>
+                    <p style="font-family: monospace; font-size: 1.1rem; color: var(--amber-start); margin-top: -5px; margin-bottom: 15px;">ID: ${p.id}</p>
+                    <p><strong>Client:</strong> ${p.name}</p>
+                    <p><strong>Email:</strong> ${p.email}</p>
+                    ${p.phone ? `<p><strong>Phone:</strong> ${p.phone}</p>` : ''}
+                    ${p.propertyAddress ? `<p><strong>Address:</strong> ${p.propertyAddress}</p>` : ''}
+                    <div style="margin-top: 15px; margin-bottom: 5px;">
+                        <p><strong>Created:</strong> ${dateCreated}</p>
+                        <p><a href="${viewUrl}" target="_blank" style="color:var(--amber-end); text-decoration:none; font-weight:500;">↗ Client Tracking Link</a></p>
+                    </div>
+                    <div class="card-actions">
+                        ${actionsHTML}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        };
+
+        // Write Actions (Will trigger SSE cascades)
+        const updateStatus = async (id, newStatus) => {
+            let payload = { status: newStatus };
+            
+            if (newStatus === 'Project Rejected') {
+                const reason = prompt('Please enter a reason for rejecting this project (will be sent to client):');
+                if (reason === null) return; // User cancelled
+                payload.rejectionReason = reason || 'Unfortunately we cannot accept this project at this time due to schedule limitations.';
+            } else {
+                if(!confirm(`Update project to "${newStatus}"? Clients viewing their tracker will see this instantly.`)) return;
+            }
+            
+            try {
+                await fetch(`/api/admin/projects/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer admin123' },
+                    body: JSON.stringify(payload)
+                });
+                // No need to call fetchData() manually, SSE will instruct us to refresh!
+            } catch (err) { alert('Connection Error'); }
+        };
+
+        const deleteProject = async (id) => {
+            if(!confirm(`PERMANENTLY delete this project? Data cannot be recovered.`)) return;
+            
+            try {
+               await fetch(`/api/admin/projects/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer admin123' }
+                });
+                // SSE handles refresh
+            } catch (err) { alert('Connection Error'); }
+        };
+
+        const bulkDelete = async () => {
+            if(!confirm(`WARNING: Are you sure you want to delete ALL projects in "${currentView}"?`)) return;
+            
+            const filtered = allProjects.filter(p => belongsToView(p, currentView));
+            for(const project of filtered) {
+                try {
+                    await fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer admin123' } });
+                } catch(err) { console.error(err); }
+            }
+        };
+
+    </script>
+</body>
+</html>

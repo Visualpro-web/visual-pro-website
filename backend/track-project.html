@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Pro | Track Project</title>
+    <style>
+        /* Apple-inspired Cinematic Theme */
+        :root {
+            --bg-dark: #050505;
+            --bg-card: rgba(26, 26, 28, 0.6);
+            --amber-start: #FF7B00;
+            --amber-end: #FFB000;
+            --text-main: #F5F5F7;
+            --text-muted: #86868B;
+            --border-light: rgba(255, 255, 255, 0.08);
+            --danger: #FF453A;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at center 20%, rgba(255,123,0,0.06), transparent 60%);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .container {
+            background: var(--bg-card);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 60px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8), 0 0 40px rgba(255, 123, 0, 0.05);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 { margin: 0 0 15px 0; font-weight: 700; font-size: 2.2rem; letter-spacing: -0.5px; }
+        p.subtitle { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 40px; line-height: 1.5; }
+
+        .input-group {
+            margin-bottom: 30px;
+            text-align: left;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+
+        .input-group input:focus {
+            border-color: var(--amber-start);
+            box-shadow: 0 0 15px rgba(255, 123, 0, 0.2);
+        }
+        
+        .input-group input::placeholder {
+            color: rgba(255,255,255,0.2);
+            text-transform: none;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .btn-amber {
+            width: 100%;
+            padding: 16px;
+            border-radius: 30px;
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-amber:hover {
+            box-shadow: 0 10px 25px rgba(255, 123, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 15px;
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Track <span class="text-gradient">Project</span></h1>
+        <p class="subtitle">Enter your Visual Pro Tracking ID to see real-time status updates.</p>
+        
+        <form id="track-form">
+            <div class="input-group">
+                <input type="text" id="project-id" placeholder="e.g. VP-1024" required autocomplete="off">
+            </div>
+            <button type="submit" class="btn-amber" id="submit-btn">Find Project</button>
+            <div class="error-msg" id="error-msg">Project not found. Please check your ID and try again.</div>
+        </form>
+        
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 40px;">
+            <a href="/" style="color: var(--text-muted); text-decoration: none;">&larr; Back to Home</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('track-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('project-id');
+            const submitBtn = document.getElementById('submit-btn');
+            const errorMsg = document.getElementById('error-msg');
+            
+            let pId = input.value.trim().toUpperCase();
+            if(!pId) return;
+
+            // Optional: Format correction if they just typed 1024
+            if(/^\d{4,}$/.test(pId)) pId = `VP-${pId}`;
+            input.value = pId;
+
+            submitBtn.textContent = 'Searching...';
+            submitBtn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                // Check if valid via the client API portal
+                const res = await fetch(`/api/client-portal/${pId}`);
+                if (res.ok) {
+                    // Redirect to the actual portal with params
+                    window.location.href = `/project-status?id=${pId}`;
+                } else {
+                    errorMsg.style.display = 'block';
+                    submitBtn.textContent = 'Find Project';
+                    submitBtn.disabled = false;
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Connection error. Please try again.';
+                errorMsg.style.display = 'block';
+                submitBtn.textContent = 'Find Project';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

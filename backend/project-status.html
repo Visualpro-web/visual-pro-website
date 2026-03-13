@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Pro | Client Portal</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon-client.svg">
+    <style>
+        /* Apple-inspired Cinematic Theme */
+        :root {
+            --bg-dark: #050505;
+            --bg-card: rgba(26, 26, 28, 0.6);
+            --amber-start: #FF7B00;
+            --amber-end: #FFB000;
+            --text-main: #F5F5F7;
+            --text-muted: #86868B;
+            --border-light: rgba(255, 255, 255, 0.08);
+            --success: #32D74B;
+            --danger: #FF453A;
+            --warning: #FF9F0A;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at center 20%, rgba(255,123,0,0.06), transparent 60%);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .container {
+            background: var(--bg-card);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 50px 60px;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8), 0 0 40px rgba(255, 123, 0, 0.05);
+            text-align: center;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 { margin: 0 0 10px 0; font-weight: 700; font-size: 2.2rem; letter-spacing: -0.5px; }
+        .project-title { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 50px; font-weight: 500;}
+
+        /* Sync Indicator */
+        .live-badge {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(50, 215, 75, 0.1);
+            color: var(--success);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(50, 215, 75, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .live-dot {
+            width: 6px; height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(50, 215, 75, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(50, 215, 75, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(50, 215, 75, 0); }
+        }
+
+        /* Progress Tracker */
+        .tracker {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            text-align: left;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        /* Vertical Line */
+        .tracker::before {
+            content: '';
+            position: absolute;
+            top: 25px;
+            bottom: 25px;
+            left: 24px;
+            width: 2px;
+            background: var(--border-light);
+            z-index: 0;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            opacity: 0.4;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateX(0);
+        }
+
+        .step.completed { opacity: 0.8; }
+        .step.active { 
+            opacity: 1; 
+            transform: translateX(10px); 
+        }
+
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #111;
+            border: 2px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 25px;
+            font-size: 1.2rem;
+            transition: all 0.5s ease;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+
+        .step.completed .step-icon {
+            background: rgba(50, 215, 75, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .step.active .step-icon {
+            background: linear-gradient(135deg, rgba(255, 123, 0, 0.1), rgba(255, 176, 0, 0.1));
+            border-color: var(--amber-start);
+            color: var(--amber-end);
+            box-shadow: 0 0 20px rgba(255, 123, 0, 0.3), inset 0 0 10px rgba(255, 123, 0, 0.1);
+        }
+
+        .step-text { font-size: 1.2rem; font-weight: 600; color: var(--text-main); }
+        .step-desc { font-size: 0.95rem; color: var(--text-muted); display: block; margin-top: 6px; line-height: 1.4; }
+
+        .message { margin-top: 40px; padding: 20px; border-radius: 16px; font-size: 1rem; line-height: 1.5; }
+        .message.warning { background: rgba(255, 159, 10, 0.1); color: var(--warning); border: 1px solid rgba(255, 159, 10, 0.2); }
+        .message.danger { background: rgba(255, 69, 58, 0.1); color: var(--danger); border: 1px solid rgba(255, 69, 58, 0.2); }
+
+    </style>
+</head>
+<body>
+
+    <div class="container" id="loading">
+        <h1 style="color:var(--text-muted); font-size: 1.5rem;">Authenticating Link...</h1>
+    </div>
+
+    <div class="container" id="content" style="display:none;">
+        <div class="live-badge" id="sync-status"><div class="live-dot"></div> Live Update</div>
+        
+        <h1>Hello, <span id="client-name" class="text-gradient">Client</span></h1>
+        <div class="project-title" id="project-title">Project Tracking</div>
+        
+        <div id="status-message"></div>
+
+        <div class="tracker" id="tracker-flow">
+            <!-- Tracker built dynamically -->
+        </div>
+
+        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 50px;">
+            Thank you for flying with Visual Pro.
+        </p>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('id');
+        let sseConnection = null;
+
+        const flow = [
+            { key: 'Request Received', label: 'Request Received', desc: 'We are reviewing your submission.' },
+            { key: 'Project Started', label: 'Project Started', desc: 'Your project is officially active and scaling up.' },
+            { key: 'Filming in Progress', label: 'Filming in Progress', desc: 'Our team is on-site capturing cinematic footage.' },
+            { key: 'Editing in Progress', label: 'Editing in Progress', desc: 'We are cutting, color grading, and adding final polish.' },
+            { key: 'Project Completed', label: 'Project Completed', desc: 'Delivered and finalized. Enjoy your premium visuals!' }
+        ];
+
+        // Initialize Server-Sent Events to listen for Real-Time Updates
+        const initSSE = () => {
+            if (sseConnection || !projectId) return;
+            sseConnection = new EventSource('/api/events');
+            
+            // Listen specifically for project updates
+            sseConnection.addEventListener('project_updated', (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    // Only re-fetch if the event pertains to THIS project
+                    if (data.id === projectId) {
+                        console.log("Real-time update received for this project!");
+                        fetchStatus(); 
+                    }
+                } catch(err){}
+            });
+
+            // Listen for hard deletions
+            sseConnection.addEventListener('project_deleted', (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.id === projectId) {
+                        document.getElementById('content').innerHTML = `
+                            <h1 style="color:var(--danger)">Project Removed</h1>
+                            <p style="color:var(--text-muted)">This project has been permanently deleted by the administrator.</p>
+                        `;
+                    }
+                } catch(err){}
+            });
+
+            sseConnection.onerror = () => {
+                const badge = document.getElementById('sync-status');
+                if(badge) {
+                    badge.innerHTML = '<span style="color:var(--danger)">Offline</span>';
+                    badge.style.background = 'rgba(255, 69, 58, 0.1)';
+                    badge.style.borderColor = 'rgba(255, 69, 58, 0.2)';
+                    badge.style.color = 'var(--danger)';
+                }
+            }
+        };
+
+        const fetchStatus = async () => {
+            if(!projectId) {
+                document.getElementById('loading').innerHTML = '<h1 style="color:var(--danger)">Invalid Tracking Link</h1><p>No project ID provided in the URL.</p>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/client-portal/${projectId}`);
+                if(res.ok) {
+                    const data = await res.json();
+                    renderProject(data);
+                    initSSE(); // Connect live sync after initial load
+                } else {
+                    document.getElementById('loading').innerHTML = '<h1 style="color:var(--danger)">Project Not Found</h1><p style="color:var(--text-muted)">Please double-check your tracking link.</p>';
+                }
+            } catch(err) {
+                document.getElementById('loading').innerHTML = '<h1 style="color:var(--danger)">Connection Error</h1><p style="color:var(--text-muted)">Could not connect to the server.</p>';
+            }
+        };
+
+        const renderProject = (p) => {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            document.getElementById('client-name').textContent = p.name;
+            document.getElementById('project-title').textContent = p.projectTitle || 'Visual Pro Production';
+
+            const tracker = document.getElementById('tracker-flow');
+            const msgBox = document.getElementById('status-message');
+
+            if (p.status === 'Project Rejected') {
+                msgBox.innerHTML = `<div class="message danger">Unfortunately, we could not accept this request at this time. Our schedule might be at full capacity.</div>`;
+                tracker.style.display = 'none';
+                return;
+            }
+
+            if (p.status === 'Project Cancelled') {
+                msgBox.innerHTML = `<div class="message warning">This project has been cancelled. Please contact us if you need further details.</div>`;
+                tracker.style.display = 'none';
+                return;
+            }
+
+            // Normal Flow
+            tracker.style.display = 'flex';
+            msgBox.innerHTML = '';
+            tracker.innerHTML = '';
+            
+            // Find current step index
+            let currentIndex = flow.findIndex(f => f.key === p.status);
+            // Fallback for edge cases
+            if (currentIndex === -1) currentIndex = 0;
+
+            flow.forEach((step, index) => {
+                const el = document.createElement('div');
+                el.className = 'step';
+                
+                let icon = '';
+                if (index < currentIndex) {
+                    el.classList.add('completed');
+                    icon = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>`;
+                } else if (index === currentIndex) {
+                    el.classList.add('active');
+                    icon = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+                    </svg>`;
+                    if(step.key === 'Project Completed') {
+                        // Max state
+                        el.classList.replace('active', 'completed');
+                        // Make amber completed checkmark
+                        icon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>`;
+                        el.querySelector('.step-icon')?.setAttribute('style', 'color: var(--amber-end); border-color: var(--amber-start); background: rgba(255, 123, 0, 0.1);');
+                    }
+                } else {
+                    icon = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                    </svg>`;
+                }
+
+                if(index === currentIndex && step.key === 'Project Completed') {
+                     el.innerHTML = `
+                        <div class="step-icon" style="color: var(--amber-end); border-color: var(--amber-start); background: rgba(255, 123, 0, 0.1); box-shadow: 0 0 20px rgba(255, 123, 0, 0.3);">${icon}</div>
+                        <div>
+                            <div class="step-text">${step.label}</div>
+                            <span class="step-desc">${step.desc}</span>
+                        </div>
+                    `;
+                } else {
+                    el.innerHTML = `
+                        <div class="step-icon">${icon}</div>
+                        <div>
+                            <div class="step-text">${step.label}</div>
+                            <span class="step-desc">${step.desc}</span>
+                        </div>
+                    `;
+                }
+               
+                tracker.appendChild(el);
+            });
+        };
+
+        // Initial Load
+        fetchStatus();
+    </script>
+</body>
+</html>

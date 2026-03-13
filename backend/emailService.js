@@ -1,0 +1,198 @@
+const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+const { LOGS_DIR } = require('./dataService');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.resend.com',
+    port: process.env.SMTP_PORT || 465,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
+const logEvent = (eventType, details) => {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] EVENT: ${eventType} | DETAILS: ${JSON.stringify(details)}\n`;
+    const logFile = path.join(LOGS_DIR, 'email-events.log');
+    
+    fs.appendFile(logFile, logEntry, (err) => {
+        if (err) console.error('Failed to write to email log:', err);
+    });
+};
+
+const sendEmail = async (to, subject, htmlBody, eventType, retries = 3) => {
+    const mailOptions = {
+        from: process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
+        to: to,
+        subject: subject,
+        html: htmlBody,
+    };
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const info = await transporter.sendMail(mailOptions);
+            console.log(`Email sent successfully on attempt ${attempt}: ${info.messageId}`);
+            logEvent(eventType, { to, subject, status: 'success', messageId: info.messageId });
+            return true;
+        } catch (error) {
+            console.error(`Attempt ${attempt} to send email failed:`, error.message);
+            if (attempt === retries) {
+                logEvent(eventType, { to, subject, status: 'failed', error: error.message });
+                console.error('All retries failed.');
+                return false;
+            }
+            await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        }
+    }
+};
+
+const wrapEmailTemplate = (content, projectId = null) => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1;} }
+    .clock { width: 50px; height: 50px; border: 3px solid #FFB000; border-radius: 50%; position: relative; margin: 30px auto; }
+    .clock::before { content: ''; position: absolute; top: 10px; left: 23px; width: 3px; height: 15px; background: #FFB000; border-radius: 3px; transform-origin: bottom center; animation: spin 2s linear infinite; }
+    .clock::after { content: ''; position: absolute; top: 23px; left: 23px; width: 15px; height: 3px; background: #FFB000; border-radius: 3px; transform-origin: left center; animation: spin 12s linear infinite; }
+    .check-circle { width: 60px; height: 60px; border-radius: 50%; background: rgba(50, 215, 75, 0.1); border: 2px solid #32D74B; color: #32D74B; font-size: 32px; display: flex; align-items: center; justify-content: center; margin: 30px auto; animation: popIn 0.6s cubic-bezier(0.16, 1, 0.3, 1); text-align: center; line-height: 60px; }
+    .completion-check { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,123,0,0.1), rgba(255,176,0,0.1)); border: 3px solid #FFB000; color: #FFB000; font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 40px auto; animation: popIn 0.8s cubic-bezier(0.16, 1, 0.3, 1); text-align: center; line-height: 80px; box-shadow: 0 0 30px rgba(255,123,0,0.3); }
+    body, p, h1, h2 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+</style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #050505; color: #F5F5F7; -webkit-font-smoothing: antialiased;">
+    <div style="padding: 40px 20px; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; background: #111; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #FF7B00, #FFB000); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #000; font-size: 28px; font-weight: 800; letter-spacing: -1px;">Visual Pro</h1>
+            </div>
+            <!-- Content -->
+            <div style="padding: 40px 40px; text-align: center;">
+                ${content}
+                ${projectId ? `
+                <div style="margin-top: 40px;">
+                    <a href="http://localhost:3000/track-project" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 30px; font-size: 16px;">Track Your Project</a>
+                </div>` : ''}
+            </div>
+            <!-- Project ID Section -->
+            ${projectId ? `
+            <div style="background: rgba(255,123,0,0.05); border-top: 1px solid rgba(255,123,0,0.1); padding: 25px 30px; text-align: center;">
+                <p style="margin: 0; font-size: 13px; color: #86868B; text-transform: uppercase; letter-spacing: 1px;">Project ID</p>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: 700; font-family: monospace; color: #FFB000;">${projectId}</p>
+            </div>` : ''}
+            <!-- Footer -->
+            <div style="background: #0a0a0a; padding: 40px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
+                <p style="margin: 0; font-weight: 600; color: #F5F5F7; font-size: 18px;">Visual Pro</p>
+                <p style="margin: 6px 0 0 0; font-size: 14px; color: #86868B;">Creative Video Production</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+};
+
+const sendNewRequestEmails = async (clientData, projectId) => {
+    const adminEmail = process.env.ADMIN_EMAIL || 'munelstg0@gmail.com';
+    
+    // Admin Notif
+    const adminSubject = 'New Project Request – Visual Pro';
+    let adminContent = `
+        <h2 style="margin-top:0; color:#fff;">New Project Request</h2>
+        <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <p style="margin: 5px 0;"><strong>Client Name:</strong> ${clientData.name}</p>
+            <p style="margin: 5px 0;"><strong>Client Email:</strong> ${clientData.email}</p>
+            ${clientData.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${clientData.phone}</p>` : ''}
+            ${clientData.propertyAddress ? `<p style="margin: 5px 0;"><strong>Property Address:</strong> ${clientData.propertyAddress}</p>` : ''}
+            ${clientData.projectTitle ? `<p style="margin: 5px 0;"><strong>Video Type:</strong> ${clientData.projectTitle}</p>` : ''}
+            ${clientData.desiredDate ? `<p style="margin: 5px 0;"><strong>Desired Date:</strong> ${clientData.desiredDate}</p>` : ''}
+        </div>
+        <p style="margin-top: 30px;"><a href="http://localhost:3000/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Go to Admin Dashboard &rarr;</a></p>
+    `;
+
+    // Client Confirmation
+    const clientSubject = 'Your request has been received – Visual Pro';
+    const clientContent = `
+        <div class="clock"></div>
+        <h2 style="margin-top:20px; font-size: 24px; color:#fff;">Hello ${clientData.name},</h2>
+        <p style="font-size: 16px; color: #ccc;">Thank you for contacting Visual Pro.</p>
+        <p style="font-size: 16px; color: #ccc;">Your project request has been received and is currently pending approval.</p>
+    `;
+
+    Promise.all([
+        sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request received (admin notif)'),
+        sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request received (client notif)')
+    ]);
+};
+
+const sendStatusUpdateEmail = async (clientData, newStatus) => {
+    let subject = 'Project Update – Visual Pro';
+    let content = '';
+
+    if (newStatus === 'Project Started') {
+        subject = 'Your project has been approved – Visual Pro';
+        content = `
+            <div class="check-circle">&#10003;</div>
+            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+            <p style="font-size: 18px; color: #FFB000; font-weight: 600;">Great news!</p>
+            <p style="font-size: 16px; color: #ccc;">Your project request has been approved and we will begin preparing your project.</p>
+        `;
+    } else if (newStatus === 'Filming in Progress' || newStatus === 'Editing in Progress') {
+        content = `
+            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+            <p style="font-size: 16px; color: #ccc;">Your project status has been updated.</p>
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin: 20px 0;">
+                <p style="margin: 0; font-size: 14px; color: #86868B;">Current status</p>
+                <p style="margin: 5px 0 0 0; font-size: 20px; font-weight: 600; color: #fff;">${newStatus}</p>
+            </div>
+        `;
+        if (newStatus === 'Filming in Progress') {
+            subject = 'Your project has started – Visual Pro';
+            content = `
+                <div class="check-circle">&#10003;</div>
+                <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+                <p style="font-size: 16px; color: #ccc;">Your project is now officially in progress.</p>
+                <p style="font-size: 16px; color: #ccc;">Our team has started working on it and we will keep you updated.</p>
+            `;
+        }
+    } else if (newStatus === 'Project Completed') {
+        subject = 'Your project is completed – Visual Pro';
+        content = `
+            <div class="completion-check">&#10004;</div>
+            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+            <p style="font-size: 18px; color: #FFB000; font-weight: 600;">Great news!</p>
+            <p style="font-size: 16px; color: #ccc;">Your project has been completed.</p>
+            <p style="font-size: 16px; color: #ccc;">Thank you for choosing Visual Pro.</p>
+        `;
+    } else if (newStatus === 'Project Rejected') {
+        subject = 'Update on your request – Visual Pro';
+        const reason = clientData.rejectionReason || 'Unfortunately we cannot accept this project at this time due to schedule limitations.';
+        content = `
+            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+            <p style="font-size: 16px; color: #ccc;">Unfortunately we cannot accept your request at this time.</p>
+            <div style="background: rgba(255,69,58,0.1); border: 1px solid rgba(255,69,58,0.2); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: left;">
+                <p style="margin: 0; font-size: 14px; color: #FF453A; font-weight: 600;">Reason:</p>
+                <p style="margin: 8px 0 0 0; font-size: 15px; color: #fff;">"${reason}"</p>
+            </div>
+        `;
+    } else if (newStatus === 'Project Cancelled') {
+        subject = 'Project Cancelled – Visual Pro';
+        content = `
+            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+            <p style="font-size: 16px; color: #ccc;">This project has been cancelled by the administrator.</p>
+        `;
+    }
+
+    sendEmail(clientData.email, subject, wrapEmailTemplate(content, clientData.id), `status changed to ${newStatus}`);
+};
+
+module.exports = {
+    sendNewRequestEmails,
+    sendStatusUpdateEmail
+};

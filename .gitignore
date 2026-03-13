@@ -1,0 +1,20 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# MacOS hidden files
+.DS_Store
+
+# Data logs
+backend/visualpro-data/email-events.log
+backend/visualpro-data/clients/
+backend/visualpro-data/projects/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
