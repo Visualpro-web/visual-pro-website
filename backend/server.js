@@ -72,7 +72,7 @@ app.get('/track-project', (req, res) => {
 // Basic Auth Middleware for protecting Admin Endpoints
 const adminAuth = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    if (authHeader === 'Bearer admin123') {
+    if (authHeader === 'Bearer 123') {
         next();
     } else {
         res.status(401).json({ error: 'Unauthorized Access' });
