@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Determine language tag from btn id
             const newLang = btn.id.split('-')[1]; // returns 'en' or 'es'
+            
+            // Set document lang attribute for SEO
+            document.documentElement.lang = newLang;
 
             // Swap all texts
             document.querySelectorAll('[data-en][data-es]').forEach(el => {

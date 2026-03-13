@@ -13,18 +13,16 @@ try {
     console.error('Warning: could not create logs directory:', e.message);
 }
 
-// Connect to MongoDB Function
 const connectDB = async () => {
     try {
         if (!process.env.MONGODB_URI) {
-            console.error('❌ CRITICAL: MONGODB_URI is not defined in Environment Variables!');
-            return false;
+            console.log('⚠️ Running in memory mode without MongoDB.');
+            return true;
         }
         
         const sanitized = process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@');
         console.log(`🔗 Connecting to: ${sanitized}`);
         
-        // Mongoose 6+ connection doesn't need useNewUrlParser/useUnifiedTopology
         await mongoose.connect(process.env.MONGODB_URI);
         
         console.log('✅ MongoDB connection established.');
@@ -64,15 +62,25 @@ const credentialSchema = new mongoose.Schema({
 
 const Credential = mongoose.model('Credential', credentialSchema);
 
+let mockProjects = [];
+
 const getProjects = async () => {
+    if(!process.env.MONGODB_URI) return mockProjects;
     return await Project.find({}).lean();
 };
 
 const getProjectById = async (id) => {
+    if(!process.env.MONGODB_URI) return mockProjects.find(p => p.id === id);
     return await Project.findOne({ id }).lean();
 };
 
 const saveProject = async (projectData) => {
+    if(!process.env.MONGODB_URI) {
+        const idx = mockProjects.findIndex(p => p.id === projectData.id);
+        if(idx >= 0) mockProjects[idx] = projectData;
+        else mockProjects.push(projectData);
+        return true;
+    }
     try {
         await Project.findOneAndUpdate(
             { id: projectData.id },
@@ -87,6 +95,11 @@ const saveProject = async (projectData) => {
 };
 
 const deleteProject = async (id) => {
+    if(!process.env.MONGODB_URI) {
+        const initial = mockProjects.length;
+        mockProjects = mockProjects.filter(p => p.id !== id);
+        return mockProjects.length < initial;
+    }
     try {
         const result = await Project.deleteOne({ id });
         return result.deletedCount > 0;

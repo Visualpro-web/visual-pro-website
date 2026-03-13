@@ -1,24 +1,27 @@
 :root {
-    /* Color Palette */
-    --color-bg: #0A0A0A;
-    --color-bg-alt: #121212;
-    --color-bg-card: #1C1C1E;
+    /* Enhanced Color Palette (Deeper darks, richer ambers) */
+    --color-bg: #030303;
+    --color-bg-alt: #0C0C0C;
+    --color-bg-card: rgba(22, 22, 24, 0.7);
     
-    --color-text: #FFFFFF;
-    --color-text-muted: #A1A1A6;
+    --color-text: #F5F5F7;
+    --color-text-muted: #86868B;
     
     --color-primary: #FF7B00;
     --color-primary-light: #FFB000;
+    --color-primary-glow: rgba(255, 123, 0, 0.4);
     
     /* Typography */
     --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     
     /* Transitions */
     --transition-slow: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    --transition-norm: 0.3s ease;
+    --transition-norm: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --transition-fast: 0.15s ease-out;
     
     /* Gradients */
-    --gradient-amber: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+    --gradient-amber: linear-gradient(135deg, var(--color-primary), var(--color-primary-light), #FFD166);
+    --gradient-amber-hover: linear-gradient(135deg, #FF6600, #FF9900);
 }
 
 * {
@@ -113,14 +116,17 @@ img {
 
 .btn-primary {
     background: var(--gradient-amber);
-    color: #fff;
+    background-size: 200% auto;
+    color: #000;
     border: none;
-    box-shadow: 0 4px 15px rgba(255, 123, 0, 0.3);
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(255, 123, 0, 0.25);
 }
 
 .btn-primary:hover {
-    box-shadow: 0 6px 25px rgba(255, 123, 0, 0.5);
-    transform: translateY(-2px);
+    background-position: right center;
+    box-shadow: 0 12px 30px var(--color-primary-glow);
+    transform: translateY(-3px) scale(1.02);
 }
 
 .btn-outline {
@@ -164,9 +170,10 @@ img {
 }
 
 .navbar.scrolled {
-    background: rgba(10, 10, 10, 0.8);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(10, 10, 10, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,0.08); /* More subtle border */
 }
 
 .logo {
@@ -316,12 +323,12 @@ img {
 .card-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(255,123,0,0.8), rgba(10,10,10,0.2));
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%);
     opacity: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 2rem;
+    padding: 2.5rem;
     transition: var(--transition-norm);
 }
 
@@ -372,9 +379,11 @@ img {
 
 .pricing-card {
     background: var(--color-bg-card);
-    border-radius: 16px;
-    padding: 3rem 2rem;
-    border: 1px solid rgba(255,255,255,0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 3.5rem 2.5rem;
+    border: 1px solid rgba(255,255,255,0.06);
     transition: var(--transition-norm);
     position: relative;
     display: flex;
@@ -382,9 +391,9 @@ img {
 }
 
 .pricing-card:hover {
-    transform: translateY(-10px);
-    border-color: rgba(255, 123, 0, 0.4);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(255,123,0,0.1);
+    transform: translateY(-8px) scale(1.01);
+    border-color: rgba(255, 123, 0, 0.5);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 40px rgba(255,123,0,0.15);
 }
 
 .pricing-card h4 {
@@ -622,15 +631,17 @@ footer {
 
 .testimonial-card {
     background: var(--color-bg-card);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 123, 0, 0.15);
-    border-radius: 20px;
-    padding: 3rem 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 24px;
+    padding: 3.5rem 2.5rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     transition: var(--transition-norm);
     text-align: center;
     position: relative;
     width: 100%;
-    max-width: 420px;
+    max-width: 460px;
     aspect-ratio: 4/5;
     display: flex;
     flex-direction: column;
@@ -639,9 +650,9 @@ footer {
 }
 
 .testimonial-card:hover {
-    border-color: rgba(255, 123, 0, 0.5);
-    box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 30px rgba(255,123,0,0.15);
-    transform: translateY(-8px);
+    border-color: rgba(255, 123, 0, 0.6);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.7), 0 0 40px rgba(255,123,0,0.2);
+    transform: translateY(-5px) scale(1.02);
 }
 
 .stars {

@@ -63,8 +63,10 @@ app.get('/api/health', (req, res) => {
 });
 // === WebAuthn Biometric Auth Endpoints ===
 const rpName = 'Visual Pro';
-const rpID = process.env.RENDER_EXTERNAL_HOSTNAME || 'localhost';
-const origin = process.env.BASE_URL || `http://${rpID}:3000`;
+const origin = process.env.BASE_URL || 'http://localhost:3000';
+let rpID = 'localhost';
+try { rpID = new URL(origin).hostname; } catch(e) {}
+
 
 // Temporary store for challenges (In a real app, use a DB or Redis)
 let currentChallenges = {}; 
@@ -214,14 +216,14 @@ app.get('/track-project', (req, res) => {
 });
 
 // Basic Auth Middleware for protecting Admin Endpoints
-const adminAuth = (req, res, next) => {
+function adminAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     if (authHeader === 'Bearer 01270101') {
         next();
     } else {
         res.status(401).json({ error: 'Unauthorized Access' });
     }
-};
+}
 
 /**
  * Client Portal API: Fetch specific project
@@ -250,15 +252,11 @@ app.post('/api/clients', async (req, res) => {
         }
 
         const existingProjects = await getProjects();
-        let nextNum = 1024;
-        existingProjects.forEach(p => {
-            if (p.id && p.id.startsWith('VP-')) {
-                const num = parseInt(p.id.split('-')[1]);
-                if (!isNaN(num) && num >= nextNum) {
-                    nextNum = num + 1;
-                }
-            }
-        });
+        const existingIds = existingProjects
+            .map(p => p.id && typeof p.id === 'string' && p.id.startsWith('VP-') ? parseInt(p.id.split('-')[1]) : null)
+            .filter(n => !isNaN(n) && n !== null);
+            
+        const nextNum = existingIds.length > 0 ? Math.max(1024, Math.max(...existingIds) + 1) : 1024;
         const newId = `VP-${nextNum}`;
 
         const newProject = {

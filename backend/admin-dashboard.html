@@ -400,6 +400,8 @@
                 if (verification.verified) {
                     alert('✅ Dispositivo registrado con éxito.');
                     document.getElementById('biometric-btn').style.display = 'flex';
+                } else {
+                    throw new Error(verification.error || 'Verificación fallida en el servidor');
                 }
             } catch (err) {
                 console.error(err);
@@ -426,6 +428,8 @@
                     document.getElementById('login-overlay').style.display = 'none';
                     fetchData();
                     initSSE();
+                } else {
+                    throw new Error(verification.error || 'Fallo de autenticación en el servidor');
                 }
             } catch (err) {
                 console.error(err);

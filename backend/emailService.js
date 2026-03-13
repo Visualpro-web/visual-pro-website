@@ -66,31 +66,31 @@ const wrapEmailTemplate = (content, projectId = null) => {
     body, p, h1, h2 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #050505; color: #F5F5F7; -webkit-font-smoothing: antialiased;">
-    <div style="padding: 40px 20px; line-height: 1.6;">
-        <div style="max-width: 600px; margin: 0 auto; background: #111; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+<body style="margin: 0; padding: 0; background-color: #030303; color: #F5F5F7; -webkit-font-smoothing: antialiased;">
+    <div style="padding: 50px 20px; line-height: 1.6;">
+        <div style="max-width: 600px; margin: 0 auto; background: #0A0A0A; border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
             <!-- Header -->
-            <div style="background: linear-gradient(135deg, #FF7B00, #FFB000); padding: 30px; text-align: center;">
-                <h1 style="margin: 0; color: #000; font-size: 28px; font-weight: 800; letter-spacing: -1px;">Visual Pro</h1>
+            <div style="background: linear-gradient(135deg, #FF7B00, #FFB000); padding: 35px; text-align: center;">
+                <h1 style="margin: 0; color: #000; font-size: 32px; font-weight: 800; letter-spacing: -1.5px; text-transform: uppercase;">Visual Pro</h1>
             </div>
             <!-- Content -->
-            <div style="padding: 40px 40px; text-align: center;">
+            <div style="padding: 45px 40px; text-align: center;">
                 ${content}
                 ${projectId ? `
-                <div style="margin-top: 40px;">
-                    <a href="${baseUrl}/track-project" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 30px; font-size: 16px;">Track Your Project</a>
+                <div style="margin-top: 45px;">
+                    <a href="${baseUrl}/track-project" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 700; text-decoration: none; border-radius: 30px; font-size: 16px; box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);">Track Your Project</a>
                 </div>` : ''}
             </div>
             <!-- Project ID Section -->
             ${projectId ? `
-            <div style="background: rgba(255,123,0,0.05); border-top: 1px solid rgba(255,123,0,0.1); padding: 25px 30px; text-align: center;">
-                <p style="margin: 0; font-size: 13px; color: #86868B; text-transform: uppercase; letter-spacing: 1px;">Project ID</p>
-                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: 700; font-family: monospace; color: #FFB000;">${projectId}</p>
+            <div style="background: rgba(255,123,0,0.03); border-top: 1px solid rgba(255,123,0,0.08); padding: 25px 30px; text-align: center;">
+                <p style="margin: 0; font-size: 12px; color: #86868B; text-transform: uppercase; letter-spacing: 2px;">Project ID</p>
+                <p style="margin: 8px 0 0 0; font-size: 26px; font-weight: 700; font-family: monospace; color: #FFB000; letter-spacing: 1px;">${projectId}</p>
             </div>` : ''}
             <!-- Footer -->
-            <div style="background: #0a0a0a; padding: 40px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
-                <p style="margin: 0; font-weight: 600; color: #F5F5F7; font-size: 18px;">Visual Pro</p>
-                <p style="margin: 6px 0 0 0; font-size: 14px; color: #86868B;">Creative Video Production</p>
+            <div style="background: #050505; padding: 40px 30px; text-align: center; border-top: 1px solid rgba(255,255,255,0.03);">
+                <p style="margin: 0; font-weight: 600; color: #F5F5F7; font-size: 16px; letter-spacing: 1px;">Visual Pro</p>
+                <p style="margin: 8px 0 0 0; font-size: 13px; color: #86868B;">Premium Cinematic Video Production</p>
             </div>
         </div>
     </div>
