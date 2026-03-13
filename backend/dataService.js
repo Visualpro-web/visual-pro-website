@@ -1,12 +1,16 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config();
 
 const LOGS_DIR = path.join(__dirname, '..', 'visualpro-data', 'email-logs');
-// Ensure logs dir exists just in case
-if (!fs.existsSync(LOGS_DIR)) {
-    fs.mkdirSync(LOGS_DIR, { recursive: true });
+// Ensure logs dir exists - handle read-only filesystems in cloud
+try {
+    if (!fs.existsSync(LOGS_DIR)) {
+        fs.mkdirSync(LOGS_DIR, { recursive: true });
+    }
+} catch (e) {
+    console.error('Warning: could not create logs directory:', e.message);
 }
 
 // Connect to MongoDB

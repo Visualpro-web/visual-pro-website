@@ -120,8 +120,8 @@ app.post('/api/clients', async (req, res) => {
 
         res.status(201).json({ message: 'Saved successfully', id: newProject.id });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal error' });
+        console.error('API Error:', err);
+        res.status(500).json({ error: 'Internal error', message: err.message });
     }
 });
 
