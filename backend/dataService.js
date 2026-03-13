@@ -13,24 +13,28 @@ try {
     console.error('Warning: could not create logs directory:', e.message);
 }
 
-// Debug environment variable presence
-if (!process.env.MONGODB_URI) {
-    console.error('CRITICAL ERROR: MONGODB_URI environment variable is not defined!');
-} else {
-    const sanitized = process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@');
-    console.log('MONGODB_URI is present. Attempting connection to:', sanitized);
-}
-
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/visualpro', {
-    bufferCommands: false // Disable buffering so errors show up instantly
-}).then(() => console.log('✅ Connected to MongoDB Atlas via Mongoose'))
-  .catch(err => {
-      console.error('❌ MongoDB connection error:', err.message);
-      if (err.message.includes('password')) {
-          console.error('HINT: Check if your password contains special characters like @, :, or / and escape them, or use a simpler password.');
-      }
-  });
+// Connect to MongoDB Function
+const connectDB = async () => {
+    try {
+        if (!process.env.MONGODB_URI) {
+            console.error('❌ CRITICAL: MONGODB_URI is not defined in Environment Variables!');
+            return false;
+        }
+        
+        const sanitized = process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@');
+        console.log('🔗 Attempting to connect to MongoDB Atlas...');
+        
+        await mongoose.connect(process.env.MONGODB_URI, {
+            bufferCommands: false
+        });
+        
+        console.log('✅ Connected to MongoDB Atlas successfully.');
+        return true;
+    } catch (err) {
+        console.error('❌ MongoDB connection error:', err.message);
+        return false;
+    }
+};
 
 const projectSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
@@ -82,6 +86,7 @@ const deleteProject = async (id) => {
 };
 
 module.exports = {
+    connectDB,
     saveProject,
     getProjects,
     getProjectById,

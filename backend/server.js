@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { saveProject, getProjects, getProjectById, deleteProject } = require('./dataService');
+const { connectDB, saveProject, getProjects, getProjectById, deleteProject } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
 
 const app = express();
@@ -182,6 +182,15 @@ app.delete('/api/admin/projects/:id', adminAuth, async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
-    console.log(`Visual Pro Server Live on http://localhost:${PORT}`);
-});
+const startServer = async () => {
+    const dbConnected = await connectDB();
+    if (!dbConnected) {
+        console.error('⚠️ Warning: Server starting without MongoDB connection. Some features will fail.');
+    }
+    
+    app.listen(PORT, () => {
+        console.log(`Visual Pro Server Live on port ${PORT}`);
+    });
+};
+
+startServer();
