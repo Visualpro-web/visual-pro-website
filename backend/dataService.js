@@ -52,6 +52,18 @@ const projectSchema = new mongoose.Schema({
 
 const Project = mongoose.model('Project', projectSchema);
 
+const credentialSchema = new mongoose.Schema({
+    id: String, // base64url encoded credential ID
+    publicKey: Buffer,
+    counter: Number,
+    deviceType: String,
+    backedUp: Boolean,
+    transports: [String],
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Credential = mongoose.model('Credential', credentialSchema);
+
 const getProjects = async () => {
     return await Project.find({}).lean();
 };
@@ -91,5 +103,6 @@ module.exports = {
     getProjectById,
     deleteProject,
     LOGS_DIR,
-    Project
+    Project,
+    Credential
 };

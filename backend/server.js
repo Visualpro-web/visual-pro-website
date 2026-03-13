@@ -2,8 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { connectDB, saveProject, getProjects, getProjectById, deleteProject } = require('./dataService');
+const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
+const { 
+    generateRegistrationOptions, 
+    verifyRegistrationResponse, 
+    generateAuthenticationOptions, 
+    verifyAuthenticationResponse 
+} = require('@simplewebauthn/server');
+const { isoBase64URL } = require('@simplewebauthn/server/helpers');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,6 +61,143 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// === WebAuthn Biometric Auth Endpoints ===
+const rpName = 'Visual Pro';
+const rpID = process.env.RENDER_EXTERNAL_HOSTNAME || 'localhost';
+const origin = process.env.BASE_URL || `http://${rpID}:3000`;
+
+// Temporary store for challenges (In a real app, use a DB or Redis)
+let currentChallenges = {}; 
+
+// 1. Generate Registration Options
+app.get('/api/admin/auth/register-options', adminAuth, (req, res) => {
+    const options = generateRegistrationOptions({
+        rpName,
+        rpID,
+        userID: 'admin-user',
+        userName: 'Admin',
+        attestationType: 'none',
+        authenticatorSelection: {
+            residentKey: 'preferred',
+            userVerification: 'preferred',
+            authenticatorAttachment: 'platform', // Enforce TouchID/FaceID
+        },
+    });
+
+    currentChallenges['admin-user'] = options.challenge;
+    res.json(options);
+});
+
+// 2. Verify Registration
+app.post('/api/admin/auth/register-verify', adminAuth, async (req, res) => {
+    const { body } = req;
+    const expectedChallenge = currentChallenges['admin-user'];
+
+    if (!expectedChallenge) {
+        return res.status(400).json({ error: 'No challenge found' });
+    }
+
+    try {
+        const verification = await verifyRegistrationResponse({
+            response: body,
+            expectedChallenge,
+            expectedOrigin: origin,
+            expectedRPID: rpID,
+        });
+
+        if (verification.verified) {
+            const { registrationInfo } = verification;
+            const { credentialID, credentialPublicKey, counter } = registrationInfo;
+
+            // Save credential to DB
+            const newCredential = new Credential({
+                id: isoBase64URL.fromBuffer(credentialID),
+                publicKey: Buffer.from(credentialPublicKey),
+                counter,
+                deviceType: 'singleDevice',
+                backedUp: true,
+                transports: body.response.transports || ['internal'],
+            });
+
+            await newCredential.save();
+            res.json({ verified: true });
+        } else {
+            res.status(400).json({ error: 'Verification failed' });
+        }
+    } catch (error) {
+        console.error('Registration Verification Error:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        delete currentChallenges['admin-user'];
+    }
+});
+
+// 3. Generate Authentication Options
+app.get('/api/admin/auth/login-options', async (req, res) => {
+    const credentials = await Credential.find({});
+    
+    if (credentials.length === 0) {
+        return res.status(400).json({ error: 'No fingerprint registered' });
+    }
+
+    const options = generateAuthenticationOptions({
+        rpID,
+        allowCredentials: credentials.map(cred => ({
+            id: isoBase64URL.toBuffer(cred.id),
+            type: 'public-key',
+            transports: cred.transports,
+        })),
+        userVerification: 'preferred',
+    });
+
+    currentChallenges['login-admin'] = options.challenge;
+    res.json(options);
+});
+
+// 4. Verify Authentication
+app.post('/api/admin/auth/login-verify', async (req, res) => {
+    const { body } = req;
+    const expectedChallenge = currentChallenges['login-admin'];
+
+    if (!expectedChallenge) {
+        return res.status(400).json({ error: 'No challenge found' });
+    }
+
+    try {
+        const credential = await Credential.findOne({ id: body.id });
+        if (!credential) {
+            throw new Error('Credential not found');
+        }
+
+        const verification = await verifyAuthenticationResponse({
+            response: body,
+            expectedChallenge,
+            expectedOrigin: origin,
+            expectedRPID: rpID,
+            authenticator: {
+                credentialID: isoBase64URL.toBuffer(credential.id),
+                credentialPublicKey: credential.publicKey,
+                counter: credential.counter,
+            },
+        });
+
+        if (verification.verified) {
+            // Update counter
+            credential.counter = verification.authenticationInfo.newCounter;
+            await credential.save();
+
+            res.json({ verified: true, token: 'Bearer 01270101' }); // Return valid token
+        } else {
+            res.status(400).json({ error: 'Verification failed' });
+        }
+    } catch (error) {
+        console.error('Authentication Verification Error:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        delete currentChallenges['login-admin'];
+    }
+});
+
 // ======================================
 
 // Serve admin and client tracking internally
