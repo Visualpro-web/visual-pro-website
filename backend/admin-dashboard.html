@@ -300,7 +300,7 @@
     <div id="login-overlay">
         <div class="login-box">
             <h2 style="margin-top: 0;">Admin <span class="text-gradient">Access</span></h2>
-            <input type="password" id="admin-pass" placeholder="Enter password (123)">
+            <input type="password" id="admin-pass" placeholder="Enter password (01270101)">
             <button class="btn btn-amber" onclick="login()">Enter Dashboard</button>
             <p id="login-error" style="color:var(--danger); display:none; font-size: 0.85rem; margin-top:15px;">Incorrect password.</p>
         </div>
@@ -342,7 +342,7 @@
         // Auth
         const login = () => {
             const pass = document.getElementById('admin-pass').value;
-            if (pass === '123') { 
+            if (pass === '01270101') { 
                 document.getElementById('login-overlay').style.display = 'none';
                 fetchData();
                 initSSE(); // Start Real-Time Listener
@@ -403,7 +403,7 @@
             
             try {
                 const res = await fetch('/api/admin/projects', {
-                    headers: { 'Authorization': 'Bearer 123' }
+                    headers: { 'Authorization': 'Bearer 01270101' }
                 });
                 if(res.ok) {
                     allProjects = await res.json();
@@ -508,7 +508,7 @@
             try {
                 await fetch(`/api/admin/projects/${id}`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 123' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 01270101' },
                     body: JSON.stringify(payload)
                 });
                 // No need to call fetchData() manually, SSE will instruct us to refresh!
@@ -521,7 +521,7 @@
             try {
                await fetch(`/api/admin/projects/${id}`, {
                     method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer 123' }
+                    headers: { 'Authorization': 'Bearer 01270101' }
                 });
                 // SSE handles refresh
             } catch (err) { alert('Connection Error'); }
@@ -533,7 +533,7 @@
             const filtered = allProjects.filter(p => belongsToView(p, currentView));
             for(const project of filtered) {
                 try {
-                    await fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 123' } });
+                    await fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
                 } catch(err) { console.error(err); }
             }
         };
