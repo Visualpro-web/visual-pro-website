@@ -77,7 +77,7 @@ const saveProject = async (projectData) => {
         await Project.findOneAndUpdate(
             { id: projectData.id },
             projectData,
-            { new: true, upsert: true }
+            { returnDocument: 'after', upsert: true }
         );
         return true;
     } catch(err) {
