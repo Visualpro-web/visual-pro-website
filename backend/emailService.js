@@ -50,6 +50,7 @@ const sendEmail = async (to, subject, htmlBody, eventType, retries = 3) => {
 };
 
 const wrapEmailTemplate = (content, projectId = null) => {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     return `
 <!DOCTYPE html>
 <html>
@@ -77,7 +78,7 @@ const wrapEmailTemplate = (content, projectId = null) => {
                 ${content}
                 ${projectId ? `
                 <div style="margin-top: 40px;">
-                    <a href="http://localhost:3000/track-project" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 30px; font-size: 16px;">Track Your Project</a>
+                    <a href="${baseUrl}/track-project" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 30px; font-size: 16px;">Track Your Project</a>
                 </div>` : ''}
             </div>
             <!-- Project ID Section -->
@@ -101,6 +102,8 @@ const wrapEmailTemplate = (content, projectId = null) => {
 const sendNewRequestEmails = async (clientData, projectId) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'munelstg0@gmail.com';
     
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    
     // Admin Notif
     const adminSubject = 'New Project Request – Visual Pro';
     let adminContent = `
@@ -113,7 +116,7 @@ const sendNewRequestEmails = async (clientData, projectId) => {
             ${clientData.projectTitle ? `<p style="margin: 5px 0;"><strong>Video Type:</strong> ${clientData.projectTitle}</p>` : ''}
             ${clientData.desiredDate ? `<p style="margin: 5px 0;"><strong>Desired Date:</strong> ${clientData.desiredDate}</p>` : ''}
         </div>
-        <p style="margin-top: 30px;"><a href="http://localhost:3000/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Go to Admin Dashboard &rarr;</a></p>
+        <p style="margin-top: 30px;"><a href="${baseUrl}/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Go to Admin Dashboard &rarr;</a></p>
     `;
 
     // Client Confirmation

@@ -453,7 +453,7 @@
 
             filtered.forEach(p => {
                 const dateCreated = new Date(p.createdAt).toLocaleDateString();
-                const viewUrl = `http://localhost:3000/project-status?id=${p.id}`;
+                const viewUrl = `${window.location.origin}/project-status?id=${p.id}`;
 
                 let actionsHTML = '';
                 if (currentView === 'Pending') {

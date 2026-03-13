@@ -235,10 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                console.log('Attempting to fetch from:', 'http://localhost:3000/api/clients');
+                console.log('Attempting to fetch from:', '/api/clients');
                 console.log('Payload (Booking):', data);
                 
-                const response = await fetch('http://localhost:3000/api/clients', {
+                const response = await fetch('/api/clients', {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
@@ -283,10 +283,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             try {
-                console.log('Attempting to fetch from:', 'http://localhost:3000/api/clients');
+                console.log('Attempting to fetch from:', '/api/clients');
                 console.log('Payload:', data);
                 
-                const response = await fetch('http://localhost:3000/api/clients', {
+                const response = await fetch('/api/clients', {
                     method: 'POST',
                     mode: 'cors', // Explicitly set CORS mode
                     headers: {

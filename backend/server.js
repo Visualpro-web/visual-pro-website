@@ -66,8 +66,8 @@ const adminAuth = (req, res, next) => {
 /**
  * Client Portal API: Fetch specific project
  */
-app.get('/api/client-portal/:id', (req, res) => {
-    const p = getProjectById(req.params.id);
+app.get('/api/client-portal/:id', async (req, res) => {
+    const p = await getProjectById(req.params.id);
     if (!p) return res.status(404).json({ error: 'Project not found' });
     
     // Return sanitized data (don't expose internal notes if we had them)
@@ -89,7 +89,7 @@ app.post('/api/clients', async (req, res) => {
             return res.status(400).json({ error: 'Missing req fields' });
         }
 
-        const existingProjects = getProjects();
+        const existingProjects = await getProjects();
         let nextNum = 1024;
         existingProjects.forEach(p => {
             if (p.id && p.id.startsWith('VP-')) {
@@ -108,7 +108,7 @@ app.post('/api/clients', async (req, res) => {
             ...payload
         };
 
-        const success = saveProject(newProject);
+        const success = await saveProject(newProject);
         if(!success) throw new Error('Failed to save to VisualPro Data');
 
         // Async emails
@@ -127,8 +127,8 @@ app.post('/api/clients', async (req, res) => {
 /**
  * Admin: Get all projects
  */
-app.get('/api/admin/projects', adminAuth, (req, res) => {
-    res.json(getProjects());
+app.get('/api/admin/projects', adminAuth, async (req, res) => {
+    res.json(await getProjects());
 });
 
 /**
@@ -137,7 +137,7 @@ app.get('/api/admin/projects', adminAuth, (req, res) => {
 app.patch('/api/admin/projects/:id', adminAuth, async (req, res) => {
     try {
         const { status, rejectionReason } = req.body;
-        const project = getProjectById(req.params.id);
+        const project = await getProjectById(req.params.id);
         
         if(!project) return res.status(404).json({ error: 'Project not found' });
 
@@ -146,7 +146,7 @@ app.patch('/api/admin/projects/:id', adminAuth, async (req, res) => {
             project.rejectionReason = rejectionReason;
         }
         
-        saveProject(project);
+        await saveProject(project);
 
         sendStatusUpdateEmail(project, status);
 
@@ -163,9 +163,9 @@ app.patch('/api/admin/projects/:id', adminAuth, async (req, res) => {
 /**
  * Admin: Delete Project
  */
-app.delete('/api/admin/projects/:id', adminAuth, (req, res) => {
+app.delete('/api/admin/projects/:id', adminAuth, async (req, res) => {
     const id = req.params.id;
-    const success = deleteProject(id);
+    const success = await deleteProject(id);
     if(success) {
         broadcastEvent('project_deleted', { id });
         res.json({ message: 'Deleted successfully' });
