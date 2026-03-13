@@ -45,6 +45,15 @@ app.get('/api/events', (req, res) => {
         clients = clients.filter(client => client.id !== clientId);
     });
 });
+app.get('/api/health', (req, res) => {
+    const mongoose = require('mongoose');
+    res.json({
+        status: 'UP',
+        database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+        readyState: mongoose.connection.readyState,
+        timestamp: new Date().toISOString()
+    });
+});
 // ======================================
 
 // Serve admin and client tracking internally
