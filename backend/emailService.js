@@ -128,10 +128,15 @@ const sendNewRequestEmails = async (clientData, projectId) => {
         <p style="font-size: 16px; color: #ccc;">Your project request has been received and is currently pending approval.</p>
     `;
 
-    Promise.all([
-        sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request received (admin notif)'),
-        sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request received (client notif)')
-    ]);
+    // Await email delivery to prevent unhandled rejections from crashing the server
+    try {
+        await Promise.all([
+            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request received (admin notif)'),
+            sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request received (client notif)')
+        ]);
+    } catch (err) {
+        console.error('Non-critical Error sending emails:', err.message);
+    }
 };
 
 const sendStatusUpdateEmail = async (clientData, newStatus) => {

@@ -14,6 +14,12 @@ app.use(express.json());
 // Serve main website front-end
 app.use(express.static(path.join(__dirname, '../')));
 
+// Debug Middleware
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
+});
+
 // === Server-Sent Events (SSE) Setup ===
 let clients = [];
 
