@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visual Pro | Admin Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="/assets/favicon-admin.svg">
+    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
     <style>
         /* Modern Apple-style Glassmorphic Theme */
         :root {
@@ -300,8 +301,13 @@
     <div id="login-overlay">
         <div class="login-box">
             <h2 style="margin-top: 0;">Admin <span class="text-gradient">Access</span></h2>
-            <input type="password" id="admin-pass" placeholder="Enter password (01270101)">
-            <button class="btn btn-amber" onclick="login()">Enter Dashboard</button>
+            <div style="position: relative;">
+                <input type="password" id="admin-pass" placeholder="Enter password (01270101)" style="padding-right: 50px;">
+                <button id="biometric-btn" onclick="loginWithBiometrics()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 5px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--amber-start)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <button class="btn btn-amber" onclick="login()" style="width: 100%; margin-top: 15px;">Enter Dashboard</button>
             <p id="login-error" style="color:var(--danger); display:none; font-size: 0.85rem; margin-top:15px;">Incorrect password.</p>
         </div>
     </div>
@@ -338,16 +344,92 @@
         let currentView = 'Pending';
         let allProjects = [];
         let sseConnection = null;
+        let adminToken = 'Bearer 01270101'; // Fallback token
+
+        // Check for biometric support on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.PublicKeyCredential) {
+                const res = await fetch('/api/admin/auth/login-options');
+                if (res.ok) {
+                    document.getElementById('biometric-btn').style.display = 'flex';
+                }
+            }
+        });
 
         // Auth
-        const login = () => {
+        const login = async () => {
             const pass = document.getElementById('admin-pass').value;
             if (pass === '01270101') { 
                 document.getElementById('login-overlay').style.display = 'none';
                 fetchData();
-                initSSE(); // Start Real-Time Listener
+                initSSE();
+                
+                // Prompt to register biometrics if supported
+                if (window.PublicKeyCredential) {
+                    const hasRegistered = await fetch('/api/admin/auth/login-options').then(r => r.ok);
+                    if (!hasRegistered && confirm('¿Deseas activar el acceso con huella digital en este dispositivo?')) {
+                        registerBiometrics();
+                    }
+                }
             } else {
                 document.getElementById('login-error').style.display = 'block';
+            }
+        };
+
+        const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
+
+        const registerBiometrics = async () => {
+            try {
+                const optionsRes = await fetch('/api/admin/auth/register-options', {
+                    headers: { 'Authorization': 'Bearer 01270101' }
+                });
+                const options = await optionsRes.json();
+                
+                const attResp = await startRegistration(options);
+                
+                const verifyRes = await fetch('/api/admin/auth/register-verify', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer 01270101'
+                    },
+                    body: JSON.stringify(attResp),
+                });
+
+                const verification = await verifyRes.json();
+                if (verification.verified) {
+                    alert('✅ Dispositivo registrado con éxito.');
+                    document.getElementById('biometric-btn').style.display = 'flex';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Fallo al registrar la huella: ' + err.message);
+            }
+        };
+
+        const loginWithBiometrics = async () => {
+            try {
+                const optionsRes = await fetch('/api/admin/auth/login-options');
+                if (!optionsRes.ok) throw new Error('No hay huella registrada.');
+                const options = await optionsRes.json();
+
+                const asseResp = await startAuthentication(options);
+
+                const verifyRes = await fetch('/api/admin/auth/login-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(asseResp),
+                });
+
+                const verification = await verifyRes.json();
+                if (verification.verified) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    fetchData();
+                    initSSE();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error al entrar con huella: ' + err.message);
             }
         };
 
