@@ -22,16 +22,15 @@ const connectDB = async () => {
         }
         
         const sanitized = process.env.MONGODB_URI.replace(/:([^@]+)@/, ':****@');
-        console.log('🔗 Attempting to connect to MongoDB Atlas...');
+        console.log(`🔗 Connecting to: ${sanitized}`);
         
-        await mongoose.connect(process.env.MONGODB_URI, {
-            bufferCommands: false
-        });
+        // Mongoose 6+ connection doesn't need useNewUrlParser/useUnifiedTopology
+        await mongoose.connect(process.env.MONGODB_URI);
         
-        console.log('✅ Connected to MongoDB Atlas successfully.');
+        console.log('✅ MongoDB connection established.');
         return true;
     } catch (err) {
-        console.error('❌ MongoDB connection error:', err.message);
+        console.error('❌ MongoDB connection FAILED:', err.message);
         return false;
     }
 };

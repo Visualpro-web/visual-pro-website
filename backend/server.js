@@ -183,14 +183,18 @@ app.delete('/api/admin/projects/:id', adminAuth, async (req, res) => {
 
 
 const startServer = async () => {
+    console.log('🚀 Starting Visual Pro Server...');
     const dbConnected = await connectDB();
-    if (!dbConnected) {
-        console.error('⚠️ Warning: Server starting without MongoDB connection. Some features will fail.');
-    }
     
-    app.listen(PORT, () => {
-        console.log(`Visual Pro Server Live on port ${PORT}`);
-    });
+    if (dbConnected) {
+        app.listen(PORT, () => {
+            console.log(`✅ Visual Pro Server is LIVE on port ${PORT}`);
+        });
+    } else {
+        console.error('❌ FATAL: Server could NOT start because database connection failed.');
+        console.error('REASON: Check your MONGODB_URI and Password in Render Environment Variables.');
+        // We don't call app.listen() here so Render knows it failed.
+    }
 };
 
 startServer();
