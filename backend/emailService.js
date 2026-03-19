@@ -78,7 +78,7 @@ const wrapEmailTemplate = (content, projectId = null) => {
                 ${content}
                 ${projectId ? `
                 <div style="margin-top: 45px;">
-                    <a href="${baseUrl}/track-project" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 700; text-decoration: none; border-radius: 30px; font-size: 16px; box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);">Track Your Project</a>
+                    <a href="${baseUrl}/track-project" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 700; text-decoration: none; border-radius: 30px; font-size: 16px; box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);">Enter Client Portal</a>
                 </div>` : ''}
             </div>
             <!-- Project ID Section -->
@@ -101,99 +101,97 @@ const wrapEmailTemplate = (content, projectId = null) => {
 
 const sendNewRequestEmails = async (clientData, projectId) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'munelstg0@gmail.com';
-    
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     
     // Admin Notif
-    const adminSubject = 'New Project Request – Visual Pro';
+    const adminSubject = `New Request: ${clientData.name} – VP`;
     let adminContent = `
         <h2 style="margin-top:0; color:#fff;">New Project Request</h2>
         <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-top: 20px;">
             <p style="margin: 5px 0;"><strong>Client Name:</strong> ${clientData.name}</p>
-            <p style="margin: 5px 0;"><strong>Client Email:</strong> ${clientData.email}</p>
+            <p style="margin: 5px 0;"><strong>Email:</strong> ${clientData.email}</p>
             ${clientData.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${clientData.phone}</p>` : ''}
-            ${clientData.propertyAddress ? `<p style="margin: 5px 0;"><strong>Property Address:</strong> ${clientData.propertyAddress}</p>` : ''}
+            ${clientData.propertyAddress ? `<p style="margin: 5px 0;"><strong>Location:</strong> ${clientData.propertyAddress}</p>` : ''}
             ${clientData.projectTitle ? `<p style="margin: 5px 0;"><strong>Video Type:</strong> ${clientData.projectTitle}</p>` : ''}
-            ${clientData.desiredDate ? `<p style="margin: 5px 0;"><strong>Desired Date:</strong> ${clientData.desiredDate}</p>` : ''}
+            <p style="margin: 5px 0;"><strong>Status:</strong> Request Submitted</p>
         </div>
-        <p style="margin-top: 30px;"><a href="${baseUrl}/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Go to Admin Dashboard &rarr;</a></p>
+        <p style="margin-top: 30px;"><a href="${baseUrl}/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Open Dashboard &rarr;</a></p>
     `;
 
     // Client Confirmation
-    const clientSubject = 'Your request has been received – Visual Pro';
+    const clientSubject = 'Request Submitted – Visual Pro';
     const clientContent = `
         <div class="clock"></div>
         <h2 style="margin-top:20px; font-size: 24px; color:#fff;">Hello ${clientData.name},</h2>
-        <p style="font-size: 16px; color: #ccc;">Thank you for contacting Visual Pro.</p>
-        <p style="font-size: 16px; color: #ccc;">Your project request has been received and is currently pending approval.</p>
+        <p style="font-size: 16px; color: #ccc;">We have received your project request for <strong>${clientData.propertyAddress || 'your property'}</strong>.</p>
+        <p style="font-size: 16px; color: #ccc;">Our team is currently reviewing the details. You can track the live progress using the link below.</p>
     `;
 
-    // Await email delivery to prevent unhandled rejections from crashing the server
     try {
         await Promise.all([
-            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request received (admin notif)'),
-            sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request received (client notif)')
+            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request submitted (admin)'),
+            sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request submitted (client)')
         ]);
     } catch (err) {
-        console.error('Non-critical Error sending emails:', err.message);
+        console.error('Error sending emails:', err.message);
     }
 };
 
 const sendStatusUpdateEmail = async (clientData, newStatus) => {
-    let subject = 'Project Update – Visual Pro';
-    let content = '';
+    let subject = `Update: ${newStatus} – Visual Pro`;
+    let content = `
+        <h2 style="color:#fff;">Hello ${clientData.name},</h2>
+        <p style="font-size: 16px; color: #ccc;">The status of your project at <strong>${clientData.propertyAddress || 'Visual Pro'}</strong> has been updated.</p>
+        
+        <div style="background: rgba(255,255,255,0.05); padding: 25px; border-radius: 16px; margin: 30px 0; border: 1px solid rgba(255,123,0,0.1); text-align: center;">
+            <p style="margin: 0; font-size: 13px; color: #86868B; text-transform: uppercase; letter-spacing: 1px;">Current Status</p>
+            <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: 700; color: #FFB000;">${newStatus}</p>
+        </div>
+    `;
 
-    if (newStatus === 'Project Started') {
-        subject = 'Your project has been approved – Visual Pro';
-        content = `
+    // Custom UI/Logic for specific statuses
+    if (newStatus === 'Project Accepted') {
+        subject = 'Project Accepted – Next: Schedule Meeting';
+        content += `
             <div class="check-circle">&#10003;</div>
-            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-            <p style="font-size: 18px; color: #FFB000; font-weight: 600;">Great news!</p>
-            <p style="font-size: 16px; color: #ccc;">Your project request has been approved and we will begin preparing your project.</p>
-        `;
-    } else if (newStatus === 'Filming in Progress' || newStatus === 'Editing in Progress') {
-        content = `
-            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-            <p style="font-size: 16px; color: #ccc;">Your project status has been updated.</p>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin: 20px 0;">
-                <p style="margin: 0; font-size: 14px; color: #86868B;">Current status</p>
-                <p style="margin: 5px 0 0 0; font-size: 20px; font-weight: 600; color: #fff;">${newStatus}</p>
-            </div>
-        `;
-        if (newStatus === 'Filming in Progress') {
-            subject = 'Your project has started – Visual Pro';
-            content = `
-                <div class="check-circle">&#10003;</div>
-                <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-                <p style="font-size: 16px; color: #ccc;">Your project is now officially in progress.</p>
-                <p style="font-size: 16px; color: #ccc;">Our team has started working on it and we will keep you updated.</p>
-            `;
-        }
-    } else if (newStatus === 'Project Completed') {
-        subject = 'Your project is completed – Visual Pro';
-        content = `
-            <div class="completion-check">&#10004;</div>
-            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-            <p style="font-size: 18px; color: #FFB000; font-weight: 600;">Great news!</p>
-            <p style="font-size: 16px; color: #ccc;">Your project has been completed.</p>
-            <p style="font-size: 16px; color: #ccc;">Thank you for choosing Visual Pro.</p>
+            <p style="font-size: 16px; color: #ccc;">Your request has been <strong>Accepted</strong>. We are excited to work with you.</p>
+            <p style="font-size: 16px; color: #ccc;">The next step is for us to schedule a brief meeting to finalize the details.</p>
         `;
     } else if (newStatus === 'Project Rejected') {
-        subject = 'Update on your request – Visual Pro';
-        const reason = clientData.rejectionReason || 'Unfortunately we cannot accept this project at this time due to schedule limitations.';
+        subject = 'Update on your project request – Visual Pro';
+        const reason = clientData.rejectionReason || 'Unfortunately, we cannot accept this project at this time.';
         content = `
             <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-            <p style="font-size: 16px; color: #ccc;">Unfortunately we cannot accept your request at this time.</p>
+            <p style="font-size: 16px; color: #ccc;">Your project request was not accepted at this time.</p>
             <div style="background: rgba(255,69,58,0.1); border: 1px solid rgba(255,69,58,0.2); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: left;">
-                <p style="margin: 0; font-size: 14px; color: #FF453A; font-weight: 600;">Reason:</p>
+                <p style="margin: 0; font-size: 14px; color: #FF453A; font-weight: 600;">Details:</p>
                 <p style="margin: 8px 0 0 0; font-size: 15px; color: #fff;">"${reason}"</p>
             </div>
         `;
-    } else if (newStatus === 'Project Cancelled') {
-        subject = 'Project Cancelled – Visual Pro';
+    } else if (newStatus === 'Deposit Required') {
+        subject = 'Action Required: Deposit Required – Visual Pro';
+        content += `
+            <p style="font-size: 16px; color: #ccc;">To officially start the project, a <strong>50% deposit</strong> is required.</p>
+            <p style="font-size: 16px; color: #ccc;">Please visit your project dashboard to proceed with the secure payment.</p>
+        `;
+    } else if (newStatus === 'Project Started') {
+        subject = 'Deposit Confirmed – Project Started!';
+        content += `
+            <div class="check-circle">&#10003;</div>
+            <p style="font-size: 16px; color: #ccc;">Thank you for your payment. Your project is now <strong>Started</strong>.</p>
+        `;
+    } else if (newStatus === 'Final Payment Required') {
+        subject = 'Action Required: Final Payment – Visual Pro';
+        content += `
+            <p style="font-size: 16px; color: #ccc;">Your project is ready! We just need the <strong>final balance</strong> to release the high-resolution files.</p>
+        `;
+    } else if (newStatus === 'Project Completed') {
+        subject = 'Your Visual Pro Project is Complete';
         content = `
-            <h2 style="color:#fff;">Hello ${clientData.name},</h2>
-            <p style="font-size: 16px; color: #ccc;">This project has been cancelled by the administrator.</p>
+            <div class="completion-check">&#10004;</div>
+            <h2 style="color:#fff;">Your project is complete!</h2>
+            <p style="font-size: 16px; color: #ccc;">Thank you for choosing Visual Pro for your production needs.</p>
+            <p style="font-size: 16px; color: #ccc;">All final files have been released and are ready for download in your portal.</p>
         `;
     }
 

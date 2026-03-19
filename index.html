@@ -74,31 +74,143 @@
         </div>
     </header>
 
-    <section id="portfolio" class="section">
+    <!-- Cinematic Portfolio Hero -->
+    <section id="portfolio-hero" class="portfolio-hero">
+        <div class="video-bg">
+            <img src="assets/cinematic_hero.png" alt="Visual Pro Cinematic Production" class="hero-fallback-image">
+            <video autoplay muted loop playsinline class="cinematic-video">
+                <source src="assets/cinematic_hero.mp4" type="video/mp4">
+            </video>
+            <div class="overlay-amber-glow"></div>
+        </div>
+        <div class="portfolio-hero-content container">
+            <h2 class="fade-in-up" data-en="Visual Pro Portfolio" data-es="Portafolio Visual Pro">Visual Pro Portfolio</h2>
+            <p class="fade-in-up delay-1" data-en="Cinematic Real Estate & Social Media Content" data-es="Contenido Cinemático Inmobiliario y Redes Sociales">Cinematic Real Estate & Social Media Content</p>
+            <a href="#portfolio-scroll" class="btn btn-primary glow-btn fade-in-up delay-2" data-en="View Projects" data-es="Ver Proyectos">View Projects</a>
+        </div>
+    </section>
+
+    <!-- Scroll-Driven Portfolio Showcase -->
+    <section id="portfolio-scroll" class="portfolio-scroll-showcase">
+        <div class="scroll-showcase-container">
+            <!-- Project 1 -->
+            <div class="showcase-item" id="project-1">
+                <div class="video-container">
+                    <img src="assets/luxury_apartment_hero.png" alt="Luxury Apartment Showcase" class="showcase-image">
+                    <video muted loop playsinline class="showcase-video" poster="assets/luxury_apartment_hero.png">
+                        <source src="assets/project1_preview.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="project-info container">
+                    <h3 data-en="Luxury Apartment Showcase" data-es="Exhibición de Apartamento de Lujo">Luxury Apartment Showcase</h3>
+                    <p class="location"><span data-en="Location" data-es="Ubicación">Location</span>: Santiago, Dominican Republic</p>
+                    <p class="category"><span data-en="Category" data-es="Categoría">Category</span>: Real Estate</p>
+                    <p class="description" data-en="A cinematic walkthrough of a high-end penthouse with stunning city views." data-es="Un recorrido cinematográfico por un penthouse de alta gama con impresionantes vistas de la ciudad.">A cinematic walkthrough of a high-end penthouse with stunning city views.</p>
+                </div>
+            </div>
+
+            <!-- Project 2 -->
+            <div class="showcase-item" id="project-2">
+                <div class="video-container">
+                    <img src="assets/brand_storytelling.png" alt="Brand Storytelling" class="showcase-image">
+                    <video muted loop playsinline class="showcase-video" poster="assets/brand_storytelling.png">
+                        <source src="assets/project2_preview.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="project-info container">
+                    <h3 data-en="Brand Storytelling" data-es="Narrativa de Marca">Brand Storytelling</h3>
+                    <p class="location"><span data-en="Location" data-es="Ubicación">Location</span>: Santo Domingo, DR</p>
+                    <p class="category"><span data-en="Category" data-es="Categoría">Category</span>: Commercial</p>
+                    <p class="description" data-en="Elevating brand identity through high-impact visual narratives." data-es="Elevando la identidad de marca a través de narrativas visuales de alto impacto.">Elevating brand identity through high-impact visual narratives.</p>
+                </div>
+            </div>
+            
+            <!-- Project 3 -->
+            <div class="showcase-item" id="project-3">
+                <div class="video-container">
+                    <img src="assets/lifestyle_reels.png" alt="Lifestyle Reels" class="showcase-image">
+                    <video muted loop playsinline class="showcase-video" poster="assets/lifestyle_reels.png">
+                        <source src="assets/project3_preview.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <div class="project-info container">
+                    <h3 data-en="Lifestyle Reels" data-es="Reels de Estilo de Vida">Lifestyle Reels</h3>
+                    <p class="location"><span data-en="Location" data-es="Ubicación">Location</span>: Punta Cana, DR</p>
+                    <p class="category"><span data-en="Category" data-es="Categoría">Category</span>: Social Media</p>
+                    <p class="description" data-en="Dynamic social media content designed for maximum engagement." data-es="Contenido dinámico para redes sociales diseñado para el máximo engagement.">Dynamic social media content designed for maximum engagement.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Project Categories & Grid -->
+    <section id="portfolio-grid" class="section portfolio-grid-section">
         <div class="container">
-            <h2 class="section-title reveal" data-en="Our Work" data-es="Nuestro Trabajo">Our Work</h2>
-            <div class="portfolio-grid">
-                <div class="portfolio-card reveal">
-                    <img src="assets/portfolio_real_estate.png" alt="Real Estate Videos">
-                    <div class="card-overlay">
-                        <h3 data-en="Real Estate Videos" data-es="Videos Inmobiliarios">Real Estate Videos</h3>
-                        <div class="play-icon">▶</div>
+            <h2 class="section-title text-center reveal" data-en="Explore Our Work" data-es="Explora Nuestro Trabajo">Explore Our Work</h2>
+            
+            <div class="filter-buttons reveal delay-1">
+                <button class="filter-btn active" data-filter="all" data-en="All" data-es="Todos">All</button>
+                <button class="filter-btn" data-filter="real-estate" data-en="Real Estate" data-es="Bienes Raíces">Real Estate</button>
+                <button class="filter-btn" data-filter="social-media" data-en="Social Media" data-es="Redes Sociales">Social Media</button>
+                <button class="filter-btn" data-filter="commercial" data-en="Commercial" data-es="Comercial">Commercial</button>
+                <button class="filter-btn" data-filter="lifestyle" data-en="Lifestyle" data-es="Estilo de Vida">Lifestyle</button>
+            </div>
+
+            <div class="portfolio-grid-v2">
+                <!-- Grid items will be added here or dynamically via JS if many -->
+                <div class="portfolio-card-v2 reveal" data-category="real-estate">
+                    <div class="card-video-wrapper">
+                        <img src="assets/work_real_estate.png" alt="Real Estate" class="card-image">
+                        <video muted loop playsinline class="card-video" poster="assets/luxury_apartment.png">
+                            <source src="assets/project1_preview.mp4" type="video/mp4">
+                        </video>
+                        <div class="card-glow-overlay"></div>
+                        <div class="play-hint"><span>▶</span></div>
+                    </div>
+                    <div class="card-details">
+                        <h4 data-en="Luxury Penthouse" data-es="Penthouse de Lujo">Luxury Penthouse</h4>
+                        <p class="card-meta">Santiago, DR • Real Estate</p>
                     </div>
                 </div>
-                <div class="portfolio-card reveal delay-1">
-                    <img src="assets/portfolio_social.png" alt="Social Media Content">
-                    <div class="card-overlay">
-                        <h3 data-en="Social Media Content" data-es="Contenido para Redes">Social Media Content</h3>
-                        <div class="play-icon">▶</div>
+                <div class="portfolio-card-v2 reveal delay-1" data-category="commercial">
+                    <div class="card-video-wrapper">
+                        <img src="assets/work_branding.png" alt="Modern Branding" class="card-image">
+                        <video muted loop playsinline class="card-video">
+                            <source src="assets/project2_preview.mp4" type="video/mp4">
+                        </video>
+                        <div class="card-glow-overlay"></div>
+                        <div class="play-hint"><span>▶</span></div>
+                    </div>
+                    <div class="card-details">
+                        <h4 data-en="Modern Branding" data-es="Branding Moderno">Modern Branding</h4>
+                        <p class="card-meta">Santo Domingo, DR • Commercial</p>
                     </div>
                 </div>
-                <div class="portfolio-card reveal delay-2">
-                    <img src="assets/portfolio_brand.png" alt="Brand Content">
-                    <div class="card-overlay">
-                        <h3 data-en="Brand Content" data-es="Contenido de Marca">Brand Content</h3>
-                        <div class="play-icon">▶</div>
+                <div class="portfolio-card-v2 reveal delay-2" data-category="social-media">
+                    <div class="card-video-wrapper">
+                        <img src="assets/work_social.png" alt="Tourism Campaign" class="card-image">
+                        <video muted loop playsinline class="card-video" poster="assets/luxury_mansion.png">
+                            <source src="assets/project3_preview.mp4" type="video/mp4">
+                        </video>
+                        <div class="card-glow-overlay"></div>
+                        <div class="play-hint"><span>▶</span></div>
+                    </div>
+                    <div class="card-details">
+                        <h4 data-en="Tourism Campaign" data-es="Campaña Turística">Tourism Campaign</h4>
+                        <p class="card-meta">Punta Cana, DR • Social Media</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cinematic CTA -->
+    <section id="portfolio-cta" class="section cinematic-cta text-center">
+        <div class="container reveal">
+            <h2 data-en="Ready to create something cinematic?" data-es="¿Listo para crear algo cinematográfico?">Ready to create something cinematic?</h2>
+            <div class="cta-actions">
+                <button class="btn btn-primary pricing-btn large" data-en="Start Your Project" data-es="Inicia Tu Proyecto">Start Your Project</button>
+                <a href="https://calendly.com/visualpro/30min" target="_blank" class="btn btn-outline large" data-en="Book a Call" data-es="Agenda una Llamada">Book a Call</a>
             </div>
         </div>
     </section>
@@ -428,6 +540,34 @@
             <p>&copy; 2026 Visual Pro. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Fullscreen Video Player Modal -->
+    <div id="video-player-modal" class="video-modal">
+        <div class="video-modal-overlay"></div>
+        <div class="video-modal-content">
+            <button class="video-modal-close">&times;</button>
+            <div class="video-modal-body">
+                <div class="modal-video-container">
+                    <video controls class="modal-main-video">
+                        <source src="" type="video/mp4">
+                    </video>
+                </div>
+                <div class="modal-project-details">
+                    <h3 class="modal-title">Project Title</h3>
+                    <p class="modal-description">Project Description</p>
+                    <div class="equipment-section">
+                        <h4 data-en="Equipment Used" data-es="Equipo Utilizado">Equipment Used</h4>
+                        <ul class="equipment-list">
+                            <li>Pixel 6</li>
+                            <li>Hohem Gimbal</li>
+                            <li>Wireless Microphone System</li>
+                            <li>LED Lighting Kit</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Pricing Modal -->
     <div id="pricing-modal" class="modal">

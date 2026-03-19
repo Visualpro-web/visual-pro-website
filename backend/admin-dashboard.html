@@ -34,7 +34,6 @@
             min-height: 100vh;
         }
 
-        /* Typography Utilities */
         .text-gradient {
             background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
             -webkit-background-clip: text;
@@ -245,6 +244,7 @@
             transition: all 0.2s;
             background: rgba(255,255,255,0.03);
             color: var(--text-main);
+            white-space: nowrap;
         }
 
         .card-actions button:hover { background: rgba(255,255,255,0.1); }
@@ -263,7 +263,7 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8);
             backdrop-filter: blur(10px);
-            z-index: 1000;
+            z-index: 3000;
             display: flex; align-items: center; justify-content: center;
         }
 
@@ -293,6 +293,52 @@
         .login-box input:focus { border-color: var(--amber-start); }
         .login-box button { width: 100%; }
 
+        /* Manage Modal */
+        #manage-modal {
+            position: fixed; top: 0; left: 0; width: 100% ; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(15px);
+            z-index: 2000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .modal-body {
+            background: var(--bg-card);
+            padding: 40px;
+            border-radius: 28px;
+            border: 1px solid var(--border-light);
+            width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-item {
+            margin-bottom: 25px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .modal-input:focus { border-color: var(--amber-start); }
+
     </style>
 </head>
 <body>
@@ -309,6 +355,34 @@
             </div>
             <button class="btn btn-amber" onclick="login()" style="width: 100%; margin-top: 15px;">Enter Dashboard</button>
             <p id="login-error" style="color:var(--danger); display:none; font-size: 0.85rem; margin-top:15px;">Incorrect password.</p>
+        </div>
+    </div>
+
+    <!-- Manage Modal -->
+    <div id="manage-modal" style="display: none;">
+        <div class="modal-body">
+            <h2 style="margin-top: 0; margin-bottom: 30px;">Manage Project <span id="m-p-id" class="text-gradient">---</span></h2>
+            
+            <div class="modal-item">
+                <label class="modal-label">Post New Status Update</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="m-update-msg" class="modal-input" placeholder="e.g. Filming has started!">
+                    <button class="btn btn-amber" onclick="postUpdate()">Post</button>
+                </div>
+            </div>
+
+            <div class="modal-item">
+                <label class="modal-label">Configure Deliverables</label>
+                <div id="m-deliverables-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
+                    <!-- Deliverable rows -->
+                </div>
+                <button class="btn" style="width: 100%; border-style: dashed;" onclick="addDeliverableRow()">+ Add Deliverable Row</button>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 30px;">
+                <button class="btn btn-amber" style="flex:2" onclick="saveProjectChanges()">Save All Changes</button>
+                <button class="btn" style="flex:1" onclick="closeModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -344,7 +418,7 @@
         let currentView = 'Pending';
         let allProjects = [];
         let sseConnection = null;
-        let adminToken = 'Bearer 01270101'; // Fallback token
+        let selectedProjectId = null;
 
         // Check for biometric support on load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -363,14 +437,6 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 fetchData();
                 initSSE();
-                
-                // Prompt to register biometrics if supported
-                if (window.PublicKeyCredential) {
-                    const hasRegistered = await fetch('/api/admin/auth/login-options').then(r => r.ok);
-                    if (!hasRegistered && confirm('¿Deseas activar el acceso con huella digital en este dispositivo?')) {
-                        registerBiometrics();
-                    }
-                }
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
@@ -378,43 +444,11 @@
 
         const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
 
-        const registerBiometrics = async () => {
-            try {
-                const optionsRes = await fetch('/api/admin/auth/register-options', {
-                    headers: { 'Authorization': 'Bearer 01270101' }
-                });
-                const options = await optionsRes.json();
-                
-                const attResp = await startRegistration(options);
-                
-                const verifyRes = await fetch('/api/admin/auth/register-verify', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer 01270101'
-                    },
-                    body: JSON.stringify(attResp),
-                });
-
-                const verification = await verifyRes.json();
-                if (verification.verified) {
-                    alert('✅ Dispositivo registrado con éxito.');
-                    document.getElementById('biometric-btn').style.display = 'flex';
-                } else {
-                    throw new Error(verification.error || 'Verificación fallida en el servidor');
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Fallo al registrar la huella: ' + err.message);
-            }
-        };
-
         const loginWithBiometrics = async () => {
             try {
                 const optionsRes = await fetch('/api/admin/auth/login-options');
-                if (!optionsRes.ok) throw new Error('No hay huella registrada.');
+                if (!optionsRes.ok) throw new Error('No finger registered.');
                 const options = await optionsRes.json();
-
                 const asseResp = await startAuthentication(options);
 
                 const verifyRes = await fetch('/api/admin/auth/login-verify', {
@@ -428,51 +462,22 @@
                     document.getElementById('login-overlay').style.display = 'none';
                     fetchData();
                     initSSE();
-                } else {
-                    throw new Error(verification.error || 'Fallo de autenticación en el servidor');
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Error al entrar con huella: ' + err.message);
-            }
+            } catch (err) { alert(err.message); }
         };
 
-        // Initialize Server-Sent Events
         const initSSE = () => {
             if (sseConnection) return;
             sseConnection = new EventSource('/api/events');
-            
-            // Listen for any backend broadcasts
-            sseConnection.onmessage = (e) => {
-                // If the backend emits a generic message, re-fetch
-                console.log("Real-time update received.");
-                fetchData();
-            };
-
-            // Can specifically listen for custom event names
-            sseConnection.addEventListener('project_received', (e) => {
-                console.log("New Project Received!", e.data);
-                fetchData();
-            });
-
-            sseConnection.addEventListener('project_updated', (e) => {
-                console.log("Project Updated!", e.data);
-                fetchData();
-            });
-
-            sseConnection.addEventListener('project_deleted', (e) => {
-                console.log("Project Deleted!", e.data);
-                fetchData();
-            });
-
+            sseConnection.addEventListener('project_updated', () => fetchData());
+            sseConnection.addEventListener('project_received', () => fetchData());
+            sseConnection.addEventListener('project_deleted', () => fetchData());
             sseConnection.onerror = () => {
-                document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger)">Sync Offline</span>';
-                document.getElementById('sync-status').style.background = 'rgba(255, 69, 58, 0.1)';
-                document.getElementById('sync-status').style.borderColor = 'rgba(255, 69, 58, 0.2)';
-            }
+                 document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger)">Offline</span>';
+            };
         };
 
-        // Navigation Bindings
+        // Navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -483,144 +488,194 @@
             });
         });
 
-        // Fetch Data explicitly
         const fetchData = async () => {
-            if(allProjects.length === 0) document.getElementById('loading').style.display = 'block';
-            
             try {
-                const res = await fetch('/api/admin/projects', {
-                    headers: { 'Authorization': 'Bearer 01270101' }
-                });
+                const res = await fetch('/api/admin/projects', { headers: { 'Authorization': 'Bearer 01270101' } });
                 if(res.ok) {
                     allProjects = await res.json();
                     renderCards();
-                } else {
-                    console.error('Session expired or unauthorized');
                 }
-            } catch (err) {
-                console.error('Connection Error', err);
-            } finally {
-                document.getElementById('loading').style.display = 'none';
-            }
+            } catch (err) { console.error(err); }
         };
 
-        // Status Map
         const getStatusClass = (status) => {
-            if (status === 'Request Received') return 'status-pending';
-            if (['Project Started', 'Filming in Progress', 'Editing in Progress'].includes(status)) return 'status-active';
-            if (status === 'Project Completed') return 'status-completed';
-            if (status === 'Project Rejected') return 'status-rejected';
-            if (status === 'Project Cancelled') return 'status-cancelled';
-            return 'status-pending';
+            if (['Request Submitted', 'Request Under Review'].includes(status)) return 'status-pending';
+            if (['Project Completed'].includes(status)) return 'status-completed';
+            if (['Project Rejected'].includes(status)) return 'status-rejected';
+            return 'status-active';
         };
 
         const belongsToView = (p, view) => {
-            if (view === 'Pending') return p.status === 'Request Received';
-            if (view === 'Active') return ['Project Started', 'Filming in Progress', 'Editing in Progress'].includes(p.status);
+            if (view === 'Pending') return ['Request Submitted', 'Request Under Review'].includes(p.status);
+            if (view === 'Active') return !['Request Submitted', 'Request Under Review', 'Project Completed', 'Project Rejected', 'Project Cancelled'].includes(p.status);
             if (view === 'Completed') return p.status === 'Project Completed';
             if (view === 'Rejected') return p.status === 'Project Rejected';
             if (view === 'Cancelled') return p.status === 'Project Cancelled';
             return false;
         };
 
-        // Render Cards
+        const NEXT_STEPS = {
+            'Request Submitted': 'Request Under Review',
+            'Request Under Review': 'Project Accepted',
+            'Project Accepted': 'Meeting Scheduled',
+            'Meeting Scheduled': 'Deposit Required',
+            'Deposit Required': 'Project Started',
+            'Project Started': 'Filming In Progress',
+            'Filming In Progress': 'Editing In Progress',
+            'Editing In Progress': 'Final Review',
+            'Final Review': 'Final Payment Required',
+            'Final Payment Required': 'Project Completed'
+        };
+
         const renderCards = () => {
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
-            
             const filtered = allProjects.filter(p => belongsToView(p, currentView));
-            // Sort by latest created
             filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             if (filtered.length === 0) {
-                container.innerHTML = `<p style="color:var(--text-muted); font-size:1.1rem;">No projects found in this view.</p>`;
+                container.innerHTML = `<p style="color:var(--text-muted);">No projects here.</p>`;
                 return;
             }
 
             filtered.forEach(p => {
-                const dateCreated = new Date(p.createdAt).toLocaleDateString();
-                const viewUrl = `${window.location.origin}/project-status?id=${p.id}`;
-
+                const card = document.createElement('div');
+                card.className = 'card';
+                const nextStep = NEXT_STEPS[p.status];
+                
                 let actionsHTML = '';
+                if (nextStep) {
+                    // We remove onclick and use event listener for more reliability
+                    actionsHTML += `<button class="action-amber">Move to ${nextStep}</button>`;
+                }
+                if (currentView === 'Active' || currentView === 'Completed') {
+                    actionsHTML += `<button class="action-approve" onclick="openManagePortal('${p.id}')">Manage Portal</button>`;
+                }
                 if (currentView === 'Pending') {
-                    actionsHTML = `
-                        <button class="action-approve" onclick="updateStatus('${p.id}', 'Project Started')">Approve Request</button>
-                        <button class="action-reject" onclick="updateStatus('${p.id}', 'Project Rejected')">Reject</button>
-                    `;
-                } else if (currentView === 'Active') {
-                    actionsHTML = `
-                        ${p.status === 'Project Started' ? `<button class="action-amber" onclick="updateStatus('${p.id}', 'Filming in Progress')">Start Filming</button>` : ''}
-                        ${p.status === 'Filming in Progress' ? `<button class="action-amber" onclick="updateStatus('${p.id}', 'Editing in Progress')">Start Editing</button>` : ''}
-                        ${p.status === 'Editing in Progress' ? `<button class="action-approve" onclick="updateStatus('${p.id}', 'Project Completed')">Complete</button>` : ''}
-                        <button class="action-reject" onclick="updateStatus('${p.id}', 'Project Cancelled')">Cancel</button>
-                    `;
+                    actionsHTML += `<button class="action-reject" onclick="updateStatus('${p.id}', 'Project Rejected')">Reject</button>`;
                 }
                 actionsHTML += `<button onclick="deleteProject('${p.id}')">Delete</button>`;
 
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <span class="status-badge ${getStatusClass(p.status)}">${p.status}</span>
-                    <h3>${p.projectTitle || p.name}</h3>
-                    <p style="font-family: monospace; font-size: 1.1rem; color: var(--amber-start); margin-top: -5px; margin-bottom: 15px;">ID: ${p.id}</p>
-                    <p><strong>Client:</strong> ${p.name}</p>
-                    <p><strong>Email:</strong> ${p.email}</p>
-                    ${p.phone ? `<p><strong>Phone:</strong> ${p.phone}</p>` : ''}
-                    ${p.propertyAddress ? `<p><strong>Address:</strong> ${p.propertyAddress}</p>` : ''}
-                    <div style="margin-top: 15px; margin-bottom: 5px;">
-                        <p><strong>Created:</strong> ${dateCreated}</p>
-                        <p><a href="${viewUrl}" target="_blank" style="color:var(--amber-end); text-decoration:none; font-weight:500;">↗ Client Tracking Link</a></p>
-                    </div>
-                    <div class="card-actions">
-                        ${actionsHTML}
-                    </div>
+                    <div class="card-actions">${actionsHTML}</div>
                 `;
+                
+                // Add event listener to the "Move to" button if it exists
+                const moveBtn = card.querySelector('.action-amber');
+                if (moveBtn) {
+                    moveBtn.addEventListener('click', () => advanceStep(p.id, NEXT_STEPS[p.status], moveBtn));
+                }
+                
                 container.appendChild(card);
             });
         };
 
-        // Write Actions (Will trigger SSE cascades)
-        const updateStatus = async (id, newStatus) => {
-            let payload = { status: newStatus };
-            
-            if (newStatus === 'Project Rejected') {
-                const reason = prompt('Please enter a reason for rejecting this project (will be sent to client):');
-                if (reason === null) return; // User cancelled
-                payload.rejectionReason = reason || 'Unfortunately we cannot accept this project at this time due to schedule limitations.';
-            } else {
-                if(!confirm(`Update project to "${newStatus}"? Clients viewing their tracker will see this instantly.`)) return;
+        const advanceStep = async (id, next, btn) => {
+            let payload = { status: next };
+            if (next === 'Project Accepted') {
+                const price = prompt('Enter Total Project Price ($):');
+                if (!price) return;
+                payload.price = parseFloat(price);
             }
+            if(!confirm(`Proceed with: ${next}?`)) return;
             
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Updating...';
+                btn.disabled = true;
+                await updateProject(id, payload);
+                btn.textContent = originalText;
+                btn.disabled = false;
+            } else {
+                await updateProject(id, payload);
+            }
+        };
+
+        const openManagePortal = (id) => {
+            selectedProjectId = id;
+            const p = allProjects.find(pro => pro.id === id);
+            document.getElementById('m-p-id').textContent = id;
+            document.getElementById('manage-modal').style.display = 'flex';
+            
+            const list = document.getElementById('m-deliverables-list');
+            list.innerHTML = '';
+            (p.deliverables || []).forEach(d => addDeliverableRow(d.label, d.url));
+            if (!(p.deliverables && p.deliverables.length)) addDeliverableRow();
+        };
+
+        const closeModal = () => document.getElementById('manage-modal').style.display = 'none';
+
+        const addDeliverableRow = (l = '', u = '') => {
+            const div = document.createElement('div');
+            div.style = "display:flex; gap:10px;";
+            div.innerHTML = `
+                <input type="text" placeholder="Label" value="${l}" class="d-label modal-input" style="flex:1">
+                <input type="text" placeholder="URL" value="${u}" class="d-url modal-input" style="flex:2">
+                <button class="btn btn-danger" onclick="this.parentElement.remove()">×</button>
+            `;
+            document.getElementById('m-deliverables-list').appendChild(div);
+        };
+
+        const postUpdate = async () => {
+            const msg = document.getElementById('m-update-msg').value;
+            if (!msg) return;
+            await updateProject(selectedProjectId, { newUpdate: msg });
+            document.getElementById('m-update-msg').value = '';
+            alert('Update posted!');
+        };
+
+        const saveProjectChanges = async () => {
+            const delivs = Array.from(document.querySelectorAll('#m-deliverables-list > div')).map(row => ({
+                label: row.querySelector('.d-label').value,
+                url: row.querySelector('.d-url').value,
+                type: 'video'
+            })).filter(d => d.label && d.url);
+
+            await updateProject(selectedProjectId, { deliverables: delivs });
+            alert('Settings Saved');
+            closeModal();
+        };
+
+        const updateProject = async (id, payload) => {
             try {
-                await fetch(`/api/admin/projects/${id}`, {
+                const res = await fetch(`/api/admin/projects/${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 01270101' },
                     body: JSON.stringify(payload)
                 });
-                // No need to call fetchData() manually, SSE will instruct us to refresh!
-            } catch (err) { alert('Connection Error'); }
+                
+                if (res.ok) {
+                    await fetchData(); // Force refresh the dashboard grid
+                    console.log(`✅ Project ${id} updated successfully to: ${payload.status}`);
+                } else {
+                    const error = await res.json();
+                    alert('Update failed: ' + (error.message || error.error));
+                }
+            } catch (err) { 
+                console.error('Update Request Error:', err);
+                alert('Update Failed - Connection Error'); 
+            }
+        };
+
+        const updateStatus = async (id, status) => {
+             if (status === 'Project Rejected') {
+                const r = prompt('Reason:');
+                if (r === null) return;
+                await updateProject(id, { status, rejectionReason: r });
+            } else {
+                if(confirm(`Set to ${status}?`)) await updateProject(id, { status });
+            }
         };
 
         const deleteProject = async (id) => {
-            if(!confirm(`PERMANENTLY delete this project? Data cannot be recovered.`)) return;
-            
-            try {
-               await fetch(`/api/admin/projects/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': 'Bearer 01270101' }
-                });
-                // SSE handles refresh
-            } catch (err) { alert('Connection Error'); }
+            if(confirm('Delete permanently?')) {
+                await fetch(`/api/admin/projects/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
+            }
         };
 
         const bulkDelete = async () => {
-            if(!confirm(`WARNING: Are you sure you want to delete ALL projects in "${currentView}"?`)) return;
-            
-            const filtered = allProjects.filter(p => belongsToView(p, currentView));
-            for(const project of filtered) {
-                try {
-                    await fetch(`/api/admin/projects/${project.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
-                } catch(err) { console.error(err); }
+             if(confirm(`Delete ALL in ${currentView}?`)) {
+                const filtered = allProjects.filter(p => belongsToView(p, currentView));
+                for(let p of filtered) await fetch(`/api/admin/projects/${p.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
             }
         };
 

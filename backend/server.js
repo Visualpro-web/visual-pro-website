@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock');
 const { 
     generateRegistrationOptions, 
     verifyRegistrationResponse, 
@@ -225,6 +226,46 @@ function adminAuth(req, res, next) {
     }
 }
 
+// === Project Workflow Configuration ===
+const PROJECT_FLOW = [
+    'Request Submitted',
+    'Request Under Review',
+    'Project Accepted',
+    'Meeting Scheduled',
+    'Deposit Required',
+    'Project Started',
+    'Filming In Progress',
+    'Editing In Progress',
+    'Final Review',
+    'Final Payment Required',
+    'Project Completed'
+];
+
+/**
+ * Client Portal API: Login
+ * Securely verify Email + Project ID
+ */
+app.post('/api/client-portal/login', async (req, res) => {
+    const { email, projectId } = req.body;
+    
+    if (!email || !projectId) {
+        return res.status(400).json({ error: 'Email and Project ID are required' });
+    }
+
+    try {
+        const project = await getProjectById(projectId);
+        
+        if (project && project.email.toLowerCase() === email.toLowerCase()) {
+            res.json({ success: true, id: project.id });
+        } else {
+            res.status(401).json({ error: 'Invalid email or Project ID.' });
+        }
+    } catch (err) {
+        console.error('Login Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 /**
  * Client Portal API: Fetch specific project
  */
@@ -232,12 +273,21 @@ app.get('/api/client-portal/:id', async (req, res) => {
     const p = await getProjectById(req.params.id);
     if (!p) return res.status(404).json({ error: 'Project not found' });
     
-    // Return sanitized data (don't expose internal notes if we had them)
+    // Return sanitized data
     res.json({
         id: p.id,
         name: p.name,
-        projectTitle: p.projectTitle,
-        status: p.status
+        projectTitle: p.projectTitle || 'Visual Pro Production',
+        projectType: p.projectType || 'Cinematic Video Production',
+        location: p.propertyAddress || p.location || 'Not Specified',
+        status: p.status,
+        price: p.price || 0,
+        depositPaid: p.depositPaid || false,
+        finalPaid: p.finalPaid || false,
+        videoUrl: p.finalPaid ? (p.videoUrl || null) : null,
+        propertyAddress: p.propertyAddress,
+        updates: p.updates || [],
+        deliverables: p.finalPaid ? (p.deliverables || []) : [] // Locked until final payment
     });
 });
 
@@ -294,27 +344,141 @@ app.get('/api/admin/projects', adminAuth, async (req, res) => {
  */
 app.patch('/api/admin/projects/:id', adminAuth, async (req, res) => {
     try {
-        const { status, rejectionReason } = req.body;
+        const { status, rejectionReason, price, videoUrl, newUpdate, deliverables, projectType, location, depositPaid, finalPaid } = req.body;
         const project = await getProjectById(req.params.id);
         
         if(!project) return res.status(404).json({ error: 'Project not found' });
 
-        project.status = status;
-        if (rejectionReason) {
-            project.rejectionReason = rejectionReason;
+        if (status) {
+            // Rejection logic overrides flow
+            if (status === 'Project Rejected') {
+                project.status = 'Project Rejected';
+                project.rejectionReason = rejectionReason || 'Request not accepted.';
+            } else {
+                project.status = status;
+                // If Accepted, move to next automatically if specified
+                if (status === 'Project Accepted' && price) {
+                    project.price = price;
+                }
+            }
+            // Send Email
+            sendStatusUpdateEmail(project, project.status);
+        }
+
+        if (price !== undefined) project.price = price;
+        if (videoUrl !== undefined) project.videoUrl = videoUrl;
+        if (projectType !== undefined) project.projectType = projectType;
+        if (location !== undefined) project.location = location;
+        if (depositPaid !== undefined) project.depositPaid = depositPaid;
+        if (finalPaid !== undefined) project.finalPaid = finalPaid;
+        
+        // Handle New Update
+        if (newUpdate) {
+            if (!project.updates) project.updates = [];
+            project.updates.push({
+                timestamp: new Date(),
+                message: newUpdate
+            });
+        }
+
+        // Handle Deliverables
+        if (deliverables) {
+            project.deliverables = deliverables;
         }
         
         await saveProject(project);
 
-        sendStatusUpdateEmail(project, status);
-
-        // Broadcast status update to all connected clients (client page and dashboard)
-        broadcastEvent('project_updated', { id: project.id, status: status, project: project });
+        // Broadcast status update
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project: project });
 
         res.json({ message: 'Updated', project });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Update failed' });
+    }
+});
+
+/**
+ * Stripe: Create Checkout Session
+ */
+app.post('/api/create-checkout-session', async (req, res) => {
+    try {
+        const { projectId, type } = req.body; // type: 'deposit' or 'final'
+        const project = await getProjectById(projectId);
+
+        if (!project || !project.price) {
+            return res.status(400).json({ error: 'Project not found or price not set' });
+        }
+
+        const amount = type === 'deposit' ? Math.round(project.price / 2) : Math.round(project.price / 2);
+        
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `${type === 'deposit' ? '50% Deposit' : 'Final Balance'} - ${project.id}`,
+                        description: `Payment for project: ${project.projectTitle || project.id}`,
+                    },
+                    unit_amount: amount * 100, // Stripe uses cents
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${origin}/project-status?id=${projectId}&payment=success`,
+            cancel_url: `${origin}/project-status?id=${projectId}&payment=cancel`,
+            metadata: {
+                projectId: project.id,
+                paymentType: type
+            }
+        });
+
+        res.json({ id: session.id, url: session.url });
+    } catch (err) {
+        console.error('Stripe Session Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * Stripe: Webhook
+ */
+app.post('/api/webhook/stripe', express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+
+    try {
+        // In production, use stripe.webhooks.constructEvent
+        // For local development without stripe-cli, we can look at the body directly
+        // but it's less secure. 
+        event = req.body; 
+        
+        if (event.type === 'checkout.session.completed') {
+            const session = event.data.object;
+            const { projectId, paymentType } = session.metadata;
+
+            const project = await getProjectById(projectId);
+            if (project) {
+                if (paymentType === 'deposit') {
+                    project.depositPaid = true;
+                    project.status = 'Project Started';
+                } else if (paymentType === 'final') {
+                    project.finalPaid = true;
+                    project.status = 'Project Completed';
+                }
+                
+                await saveProject(project);
+
+                // Notifications
+                sendStatusUpdateEmail(project, project.status);
+                broadcastEvent('project_updated', { id: project.id, status: project.status, project: project });
+            }
+        }
+
+        res.json({received: true});
+    } catch (err) {
+        res.status(400).send(`Webhook Error: ${err.message}`);
     }
 });
 

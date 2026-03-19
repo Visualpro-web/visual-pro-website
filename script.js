@@ -318,4 +318,151 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    // --- Improved Scroll-Driven Showcase Logic ---
+    const showcaseItems = document.querySelectorAll('.showcase-item');
+    
+    if (showcaseItems.length > 0) {
+        const showcaseObserver = new IntersectionObserver((entries) => {
+                if (entry.isIntersecting) {
+                    // Gradual parallax effects based on intersectionRatio
+                    const ratio = entry.intersectionRatio;
+                    const info = entry.target.querySelector('.project-info');
+                    const videoCont = entry.target.querySelector('.video-container');
+                    
+                    if (info) info.style.transform = `translateY(${(1 - ratio) * 30}px)`;
+                    if (videoCont) videoCont.style.transform = `scale(${1.15 - (ratio * 0.15)})`;
+
+                    if (ratio > 0.3) {
+                        entry.target.classList.add('active');
+                        const video = entry.target.querySelector('video');
+                        if (video && video.paused) video.play().catch(e => console.log('Autoplay blocked', e));
+                    } else if (ratio < 0.2) {
+                        entry.target.classList.remove('active');
+                        const video = entry.target.querySelector('video');
+                        if (video) video.pause();
+                    }
+                }
+        }, {
+            threshold: [0.1, 0.3, 0.5, 0.7, 0.9], // Multi-threshold for more granular tracking
+            rootMargin: '0px'
+        });
+
+        showcaseItems.forEach(item => {
+            showcaseObserver.observe(item);
+            
+            // Add video error handling to ensure images show through
+            const video = item.querySelector('video');
+            if (video) {
+                video.addEventListener('error', () => {
+                    console.warn('Video failed to load, falling back to image.');
+                    video.style.opacity = '0'; // Hide broken video to show image behind
+                });
+                
+                // Ensure video is visible only when playing or loaded
+                video.addEventListener('playing', () => {
+                    video.style.opacity = '1';
+                });
+            }
+        });
+    }
+
+    // --- Portfolio Filtering Logic ---
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const portfolioCards = document.querySelectorAll('.portfolio-card-v2');
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const filter = btn.getAttribute('data-filter');
+
+            portfolioCards.forEach(card => {
+                const category = card.getAttribute('data-category');
+                if (filter === 'all' || filter === category) {
+                    card.style.display = 'block';
+                    setTimeout(() => {
+                        card.classList.add('active');
+                    }, 10);
+                } else {
+                    card.classList.remove('active');
+                    setTimeout(() => {
+                        card.style.display = 'none';
+                    }, 500);
+                }
+            });
+        });
+    });
+
+    // Auto-play/pause videos in grid on hover
+    portfolioCards.forEach(card => {
+        const video = card.querySelector('.card-video');
+        card.addEventListener('mouseenter', () => {
+            if (video) video.play().catch(e => console.log('Autoplay blocked', e));
+        });
+        card.addEventListener('mouseleave', () => {
+            if (video) {
+                video.pause();
+                video.currentTime = 0;
+            }
+        });
+    });
+
+    // --- Fullscreen Video Player Modal ---
+    const videoModal = document.getElementById('video-player-modal');
+    if (videoModal) {
+        const modalVideo = videoModal.querySelector('.modal-main-video');
+        const modalTitle = videoModal.querySelector('.modal-title');
+        const modalDesc = videoModal.querySelector('.modal-description');
+        const videoModalClose = document.querySelector('.video-modal-close');
+        const videoModalOverlay = document.querySelector('.video-modal-overlay');
+
+        const openVideoModal = (projectData) => {
+            modalVideo.src = projectData.videoSrc;
+            modalTitle.textContent = projectData.title;
+            modalDesc.textContent = projectData.description;
+            
+            videoModal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            modalVideo.play().catch(e => console.log('Modal video play blocked', e));
+        };
+
+        const closeVideoModal = () => {
+            videoModal.classList.remove('active');
+            document.body.style.overflow = '';
+            modalVideo.pause();
+            modalVideo.src = '';
+        };
+
+        if (videoModalClose) videoModalClose.addEventListener('click', closeVideoModal);
+        if (videoModalOverlay) videoModalOverlay.addEventListener('click', closeVideoModal);
+
+        portfolioCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const title = card.querySelector('h4').textContent;
+                const videoSrc = card.querySelector('video source').src;
+                const categoryMeta = card.querySelector('.card-meta').textContent;
+                
+                openVideoModal({
+                    title: title,
+                    description: `A premium ${categoryMeta} project showcasing cinematic excellence and professional storytelling.`,
+                    videoSrc: videoSrc
+                });
+            });
+        });
+
+        showcaseItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const title = item.querySelector('h3').textContent;
+                const videoSrc = item.querySelector('video source').src;
+                const desc = item.querySelector('.description').textContent;
+
+                openVideoModal({
+                    title: title,
+                    description: desc,
+                    videoSrc: videoSrc
+                });
+            });
+        });
+    }
 });

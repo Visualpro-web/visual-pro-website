@@ -45,7 +45,26 @@ const projectSchema = new mongoose.Schema({
     desiredDate: String,
     rejectionReason: String,
     date: String,
-    time: String
+    time: String,
+    price: { type: Number, default: 0 },
+    depositPaid: { type: Boolean, default: false },
+    finalPaid: { type: Boolean, default: false },
+    stripeSessionId: String,
+    videoUrl: String,
+    // Client Portal Features
+    projectType: { type: String, default: 'Cinematic Video Production' },
+    location: String,
+    updates: [{
+        timestamp: { type: Date, default: Date.now },
+        message: String
+    }],
+    deliverables: [{
+        label: String,
+        url: String,
+        size: String,
+        resolution: String,
+        type: String // 'video', 'image', etc.
+    }]
 }, { strict: false }); // Allow flexible fields
 
 const Project = mongoose.model('Project', projectSchema);
