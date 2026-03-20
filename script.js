@@ -487,7 +487,7 @@ async function checkClientAuth() {
                 const pText = isEs ? 'Mi Portal' : 'My Portal';
                 let avatarHtml = '';
                 if (user.profileImage) {
-                    avatarHtml = `<img src="${user.profileImage}" class="profile-avatar" style="width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:8px; display:inline-block;">`;
+                    avatarHtml = `<img src="${user.profileImage}" alt="${user.name}" class="profile-avatar" style="width:32px;height:32px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px; display:inline-block;" onerror="this.onerror=null; this.outerHTML='${user.name.charAt(0).toUpperCase()}';">`;
                 } else {
                     avatarHtml = `<div class="profile-avatar" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:var(--surface-light);color:var(--amber-start);font-weight:bold;font-size:0.9rem;vertical-align:middle;margin-right:8px;">${user.name.charAt(0).toUpperCase()}</div>`;
                 }
@@ -501,7 +501,7 @@ async function checkClientAuth() {
                 document.getElementById('logged-in-name-booking').textContent = user.name;
                 document.getElementById('logged-in-email-booking').textContent = user.email;
                 const avaBook = document.getElementById('logged-in-avatar-booking');
-                if(user.profileImage) avaBook.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;">`;
+                if(user.profileImage) avaBook.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${user.name.charAt(0).toUpperCase()}';">`;
                 else avaBook.innerHTML = user.name.charAt(0).toUpperCase();
 
                 const bEmail = document.getElementById('book-email');
@@ -517,7 +517,7 @@ async function checkClientAuth() {
                 document.getElementById('logged-in-name-project').textContent = user.name;
                 document.getElementById('logged-in-email-project').textContent = user.email;
                 const avaProj = document.getElementById('logged-in-avatar-project');
-                if(user.profileImage) avaProj.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;">`;
+                if(user.profileImage) avaProj.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${user.name.charAt(0).toUpperCase()}';">`;
                 else avaProj.innerHTML = user.name.charAt(0).toUpperCase();
 
                 const pEmail = document.getElementById('proj-email');

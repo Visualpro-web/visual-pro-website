@@ -305,7 +305,7 @@
                 document.getElementById('client-name').textContent = user.name;
                 document.getElementById('client-email').textContent = user.email;
                 const avatarEl = document.getElementById('client-avatar');
-                if(user.profileImage) avatarEl.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                if(user.profileImage) avatarEl.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${user.name.charAt(0).toUpperCase()}';">`;
                 else avatarEl.innerHTML = user.name.charAt(0).toUpperCase();
 
                 // Fetch Projects
