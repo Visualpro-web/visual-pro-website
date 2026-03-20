@@ -466,6 +466,10 @@
                 <div id="m-receipt-container"></div>
             </div>
 
+            <div id="m-deliver-section" style="margin-top: 30px; display: none;">
+                 <button class="btn" style="width:100%; border-color: var(--amber-start); color: var(--amber-start);" onclick="triggerSendDeliverables()">📧 Send Final Files to Client</button>
+            </div>
+
             <div style="display: flex; gap: 15px; margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 30px;">
                 <button class="btn btn-amber" style="flex:2" onclick="saveProjectChanges()">Save All Changes</button>
                 <button class="btn" style="flex:1" onclick="closeModal()">Close</button>
@@ -591,8 +595,14 @@
             sseConnection.addEventListener('project_updated', () => fetchData());
             sseConnection.addEventListener('project_received', () => fetchData());
             sseConnection.addEventListener('project_deleted', () => fetchData());
+            sseConnection.onopen = () => {
+                 document.getElementById('sync-status').innerHTML = '<div class="sync-dot"></div> Live Sync';
+            };
             sseConnection.onerror = () => {
-                 document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger)">Offline</span>';
+                 document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger)">Reconnecting...</span>';
+                 sseConnection.close();
+                 sseConnection = null;
+                 setTimeout(initSSE, 3000); // Auto-reconnect after 3 seconds
             };
         };
 
@@ -785,6 +795,20 @@
             } else {
                 verifySection.style.display = 'none';
             }
+
+            // Show Deliverables action button if final payment is verified or project completes
+            const deliverSection = document.getElementById('m-deliver-section');
+            if (p.status === 'Project Completed' || p.finalPaid) {
+                deliverSection.style.display = 'block';
+            } else {
+                deliverSection.style.display = 'none';
+            }
+        };
+
+        const triggerSendDeliverables = () => {
+            const id = document.getElementById('m-p-id').textContent;
+            closeModal();
+            openUploadModal(id);
         };
 
         const confirmPayment = async (id, type) => {

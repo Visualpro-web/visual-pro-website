@@ -64,7 +64,13 @@ app.get('/api/events', (req, res) => {
     const newClient = { id: clientId, res };
     clients.push(newClient);
 
+    // Render drops idle connections after 5m. This ping keeps it alive.
+    const heartbeat = setInterval(() => {
+        res.write(':\n\n');
+    }, 15000);
+
     req.on('close', () => {
+        clearInterval(heartbeat);
         clients = clients.filter(client => client.id !== clientId);
     });
 });

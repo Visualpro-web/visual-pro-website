@@ -361,6 +361,21 @@
         ];
 
         let globalProjects = [];
+        let sseConnection = null;
+
+        function initSSE() {
+            if (sseConnection) return;
+            sseConnection = new EventSource('/api/events');
+            sseConnection.addEventListener('project_updated', (e) => {
+                // When an update comes, refresh the client view
+                initDashboard();
+            });
+            sseConnection.onerror = () => {
+                 sseConnection.close();
+                 sseConnection = null;
+                 setTimeout(initSSE, 3000); // Reconnect in 3s
+            };
+        }
 
         async function initDashboard() {
             const token = localStorage.getItem('vp_token');
@@ -381,13 +396,30 @@
                 // Fetch Projects
                 const projRes = await fetch('/api/client/projects', { headers: { 'Authorization': `Bearer ${token}` } });
                 globalProjects = await projRes.json();
+                
+                // If a project is currently open in detail view, we should keep it open and update the UI
+                const currentViewDetail = document.getElementById('view-detail').style.display;
+                if (currentViewDetail === 'block') {
+                    // Try to find the matching project ID that is currently open
+                    const activeProjectId = document.querySelector('.p-id') ? document.querySelector('.p-id').innerText : null; // Quick hack or we can track index later. Actually we don't have active ID saved easily.
+                }
+
                 renderProjectsList();
+
+                // If a project detail is open, re-render it
+                const detailOpen = document.getElementById('view-detail').style.display === 'block';
+                if (detailOpen && window.currentOpenProjectIdx !== undefined) {
+                    openDetail(window.currentOpenProjectIdx);
+                }
 
                 document.getElementById('loading-screen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'grid';
 
+                initSSE();
+
             } catch(e) { console.error(e); }
         }
+
 
         function renderProjectsList() {
             const grid = document.getElementById('projects-grid');
@@ -420,6 +452,7 @@
         }
 
         function openDetail(index) {
+            window.currentOpenProjectIdx = index;
             const p = globalProjects[index];
             document.getElementById('view-list').style.display = 'none';
             document.getElementById('view-detail').style.display = 'block';
