@@ -209,6 +209,21 @@ const saveClient = async (clientData) => {
     }
 };
 
+const deleteClient = async (id) => {
+    if(!process.env.MONGODB_URI) {
+        const initial = mockClients.length;
+        mockClients = mockClients.filter(c => c.id !== id);
+        return mockClients.length < initial;
+    }
+    try {
+        const result = await Client.deleteOne({ id });
+        return result.deletedCount > 0;
+    } catch(err) {
+        console.error('Error deleting client:', err);
+        return false;
+    }
+};
+
 const wipeDatabase = async () => {
     if(!process.env.MONGODB_URI) {
         mockProjects = [];
@@ -232,6 +247,7 @@ module.exports = {
     getClientByEmail,
     getClientById,
     saveClient,
+    deleteClient,
     wipeDatabase,
     getCredentials,
     getCredentialById,

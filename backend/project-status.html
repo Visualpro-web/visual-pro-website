@@ -103,8 +103,25 @@
             font-size: 0.9rem;
         }
         .btn-logout:hover {
-            border-color: var(--error);
+            border-color: var(--amber-start);
+            color: var(--amber-start);
+        }
+
+        .btn-delete-account {
+            background: transparent;
+            border: 1px solid var(--border-light);
             color: var(--error);
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .btn-delete-account:hover {
+            background: rgba(255, 59, 48, 0.1);
+            border-color: var(--error);
         }
 
         /* Main Area */
@@ -228,7 +245,8 @@
                 <div id="client-avatar" class="profile-avatar"></div>
                 <h2 id="client-name" class="profile-name">---</h2>
                 <div id="client-email" class="profile-email">---</div>
-                <button class="btn-logout" onclick="logout()">Sign Out</button>
+                <button class="btn-logout" style="width: 100%;" onclick="logout()">Sign Out</button>
+                <button class="btn-delete-account" onclick="deleteAccount()">Delete Account</button>
             </div>
         </div>
 
@@ -430,6 +448,29 @@
         function logout() {
             localStorage.removeItem('vp_token');
             window.location.href = '/portal';
+        }
+
+        async function deleteAccount() {
+            const confirmed = confirm("Are you sure you want to permanently delete your account? This action cannot be undone.");
+            if (!confirmed) return;
+
+            try {
+                const token = localStorage.getItem('vp_token');
+                const res = await fetch('/api/client/me', {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    alert("Your account has been successfully deleted.");
+                    logout();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "Failed to delete account");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("An error occurred while deleting your account.");
+            }
         }
 
         async function startCheckout(id, type) {

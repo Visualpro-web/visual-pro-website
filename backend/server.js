@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential, Client, getClients, getClientByEmail, getClientById, saveClient, wipeDatabase, getCredentials, getCredentialById, saveCredential } = require('./dataService');
+const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential, Client, getClients, getClientByEmail, getClientById, saveClient, deleteClient, wipeDatabase, getCredentials, getCredentialById, saveCredential } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock');
 const upload = require('./middlewares/upload');
@@ -333,6 +333,20 @@ app.get('/api/client/me', clientAuth, async (req, res) => {
         res.json({ name: client.name, email: client.email, profileImage: client.profileImage });
     } catch (err) {
         console.error('Get Client Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.delete('/api/client/me', clientAuth, async (req, res) => {
+    try {
+        const success = await deleteClient(req.clientId);
+        if (!success) return res.status(404).json({ error: 'Client not found or could not be deleted' });
+        
+        // Also delete their projects? The user didn't specify deleting projects, just the account.
+        // For now, we only delete the account.
+        res.json({ message: 'Account deleted successfully' });
+    } catch (err) {
+        console.error('Delete Client Error:', err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
