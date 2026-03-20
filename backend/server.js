@@ -458,8 +458,8 @@ app.post('/api/clients', async (req, res) => {
         const success = await saveProject(newProject);
         if(!success) throw new Error('Failed to save to VisualPro Data');
 
-        // Async emails
-        await sendNewRequestEmails(payload, newProject.id);
+        // Async emails (no await so we don't block the response)
+        sendNewRequestEmails(payload, newProject.id).catch(console.error);
 
         // Broadcast to Dashboard
         broadcastEvent('project_received', { id: newProject.id });

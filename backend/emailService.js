@@ -10,6 +10,9 @@ const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.resend.com',
     port: smtpPort,
     secure: smtpPort === 465, // true for 465, false for other ports (like 587)
+    connectionTimeout: 10000, // 10 seconds max to connect
+    greetingTimeout: 5000,    // 5 seconds max waiting for greeting
+    socketTimeout: 15000,     // 15 seconds max overall socket timeout
     auth: {
         user: process.env.SMTP_USER || 'resend',
         pass: process.env.SMTP_PASS
