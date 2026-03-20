@@ -371,7 +371,23 @@
                 </div>
             </div>
 
-            <div class="modal-item">
+            <!-- Price & Discount -->
+            <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
+                <label class="modal-label">Modify Price & Discount</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex:1;">
+                        <small style="color:var(--text-muted);">Total Price ($)</small>
+                        <input type="number" id="m-price" class="modal-input" placeholder="0">
+                    </div>
+                    <div style="flex:1;">
+                        <small style="color:var(--text-muted);">Discount ($)</small>
+                        <input type="number" id="m-discount" class="modal-input" placeholder="0">
+                    </div>
+                </div>
+                <button class="btn btn-amber" style="width:100%; border:1px solid rgba(255,123,0,0.5);" onclick="updatePricing()">Update Price/Discount</button>
+            </div>
+
+            <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
                 <label class="modal-label">Configure Deliverables</label>
                 <div id="m-deliverables-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px;">
                     <!-- Deliverable rows -->
@@ -593,12 +609,23 @@
             filtered.forEach(p => {
                 const card = document.createElement('div');
                 card.className = 'card';
+                
+                card.innerHTML = `
+                    <div class="status-badge ${getStatusClass(p.status)}">${p.status}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <h3>${p.projectTitle || 'Project ' + p.id.slice(-6)}</h3>
+                    </div>
+                    <p><strong>Client:</strong> ${p.name || p.email}</p>
+                    <p><strong>Type:</strong> ${p.videoType}</p>
+                    <p><strong>Price:</strong> $${p.price || 0} ${p.discount ? `<span style="color:var(--success); font-size:0.8rem;">(-$${p.discount})</span>` : ''}</p>
+                `;
+
                 const nextStep = NEXT_STEPS[p.status];
                 
                 let actionsHTML = '';
                 if (nextStep) {
                     // We remove onclick and use event listener for more reliability
-                    actionsHTML += `<button class="action-amber">Move to ${nextStep}</button>`;
+                    actionsHTML += `<button class="action-amber move-btn">Move to ${nextStep}</button>`;
                 }
                 if (currentView === 'Active' || currentView === 'Completed') {
                     actionsHTML += `<button class="action-approve" onclick="openManagePortal('${p.id}')">Manage Portal</button>`;
@@ -613,7 +640,7 @@
                 `;
                 
                 // Add event listener to the "Move to" button if it exists
-                const moveBtn = card.querySelector('.action-amber');
+                const moveBtn = card.querySelector('.move-btn');
                 if (moveBtn) {
                     moveBtn.addEventListener('click', () => advanceStep(p.id, NEXT_STEPS[p.status], moveBtn));
                 }
@@ -647,6 +674,8 @@
             selectedProjectId = id;
             const p = allProjects.find(pro => pro.id === id);
             document.getElementById('m-p-id').textContent = id;
+            document.getElementById('m-price').value = p.price || 0;
+            document.getElementById('m-discount').value = p.discount || 0;
             document.getElementById('manage-modal').style.display = 'flex';
             
             const list = document.getElementById('m-deliverables-list');
@@ -684,8 +713,24 @@
             })).filter(d => d.label && d.url);
 
             await updateProject(selectedProjectId, { deliverables: delivs });
-            alert('Settings Saved');
+            alert('Deliverables Saved');
             closeModal();
+        };
+
+        const updatePricing = async () => {
+            const price = parseFloat(document.getElementById('m-price').value) || 0;
+            const discount = parseFloat(document.getElementById('m-discount').value) || 0;
+            
+            if(!confirm(`Are you sure you want to confirm the new pricing? Price: $${price}, Discount: $${discount}`)) return;
+            
+            const pass = prompt('Enter Admin Password to confirm price change:');
+            if (pass !== '01270101') {
+                alert('Incorrect password. Price change cancelled.');
+                return;
+            }
+            
+            await updateProject(selectedProjectId, { price, discount });
+            alert('Price & Discount updated successfully');
         };
 
         const updateProject = async (id, payload) => {

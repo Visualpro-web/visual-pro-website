@@ -355,18 +355,26 @@
             document.getElementById('view-detail').style.display = 'block';
 
             // Prices
-            document.getElementById('p-price').textContent = `$${(p.price||0).toLocaleString()}`;
+            const basePrice = p.price || 0;
+            const discount = p.discount || 0;
+            const effectivePrice = Math.max(0, basePrice - discount);
+            
+            let priceHtml = `$${basePrice.toLocaleString()}`;
+            if (discount > 0) {
+                priceHtml = `<span style="text-decoration:line-through; font-size:1.2rem; color:var(--text-muted); margin-right:10px;">$${basePrice.toLocaleString()}</span> <span style="color:var(--success)">$${effectivePrice.toLocaleString()}</span>`;
+            }
+            document.getElementById('p-price').innerHTML = priceHtml;
             
             // Payment Actions
             const payActions = document.getElementById('payment-actions');
             if (p.finalPaid) {
                 payActions.innerHTML = `<div class="payment-status" style="color:var(--success)"><strong>Project Fully Paid</strong></div>`;
             } else if (!p.depositPaid) {
-                 payActions.innerHTML = `<button class="payment-btn" onclick="startCheckout('${p.id}', 'deposit')">Pay 50% Deposit ($${((p.price||0)/2).toLocaleString()})</button>`;
+                 payActions.innerHTML = `<button class="payment-btn" onclick="startCheckout('${p.id}', 'deposit')">Pay 50% Deposit ($${(effectivePrice/2).toLocaleString()})</button>`;
             } else if (p.status === 'Final Payment Required' || STEPS.indexOf(p.status) >= 8) {
-                payActions.innerHTML = `<button class="payment-btn" onclick="startCheckout('${p.id}', 'final')">Pay Final Balance ($${((p.price||0)/2).toLocaleString()})</button>`;
+                payActions.innerHTML = `<button class="payment-btn" onclick="startCheckout('${p.id}', 'final')">Pay Final Balance ($${(effectivePrice/2).toLocaleString()})</button>`;
             } else {
-                payActions.innerHTML = `<div class="payment-status" style="color:var(--amber-end)"><strong>Deposit Paid</strong></div>`;
+                payActions.innerHTML = `<div class="payment-status" style="color:var(--amber-end)"><strong>Deposit Paid ($${(effectivePrice/2).toLocaleString()})</strong></div>`;
             }
 
             // Tracker
@@ -384,7 +392,7 @@
             // Deliverables
             const container = document.getElementById('deliverables-container');
             if (!p.finalPaid) {
-                container.innerHTML = `<div class="locked-overlay" style="position:relative; width:100%; height:150px; border-radius:15px;"><span class="locked-msg">Final payment required to access your files.</span></div>`;
+                container.innerHTML = `<div class="locked-overlay" style="position:relative; width:100%; height:150px; border-radius:15px; display:flex; align-items:center; justify-content:center; text-align:center;"><span class="locked-msg" style="padding:0 20px;">Final payment required to access your files.</span></div>`;
             } else if (p.deliverables && p.deliverables.length > 0) {
                 container.innerHTML = '';
                 p.deliverables.forEach(d => {
@@ -431,7 +439,11 @@
                     body: JSON.stringify({ projectId: id, type })
                 });
                 const data = await res.json();
-                if (data.url) window.location.href = data.url;
+                if (data.url) {
+                    window.location.href = data.url;
+                } else if (data.error) {
+                    alert('Checkout Error: ' + data.error);
+                }
             } catch (err) { alert('Stripe Error: ' + err.message); }
         }
 
