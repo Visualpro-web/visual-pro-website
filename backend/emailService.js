@@ -212,17 +212,7 @@ async function sendProjectDeliveryEmail(client, project) {
         </div>
     `;
 
-    try {
-        await resend.emails.send({
-            from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-            to: client.email,
-            subject: subject,
-            html: wrapEmailTemplate(content, project.id)
-        });
-        logEmailSync('SYSTEM', client.email, 'Project Delivered', 'Success');
-    } catch (err) {
-        logEmailSync('SYSTEM', client.email, 'Project Delivered Error', `Failed: ${err.message}`);
-    }
+    sendEmail(client.email, subject, wrapEmailTemplate(content, project.id), 'Project Delivered');
 }
 
 module.exports = {
