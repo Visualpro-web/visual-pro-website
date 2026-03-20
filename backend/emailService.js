@@ -1,23 +1,7 @@
-const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 const { LOGS_DIR } = require('./dataService');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-
-const smtpPort = parseInt(process.env.SMTP_PORT) || 465;
-
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.resend.com',
-    port: smtpPort,
-    secure: smtpPort === 465, // true for 465, false for other ports (like 587)
-    connectionTimeout: 10000, // 10 seconds max to connect
-    greetingTimeout: 5000,    // 5 seconds max waiting for greeting
-    socketTimeout: 15000,     // 15 seconds max overall socket timeout
-    auth: {
-        user: process.env.SMTP_USER || 'resend',
-        pass: process.env.SMTP_PASS
-    }
-});
 
 const logEvent = (eventType, details) => {
     const timestamp = new Date().toISOString();
@@ -30,26 +14,42 @@ const logEvent = (eventType, details) => {
 };
 
 const sendEmail = async (to, subject, htmlBody, eventType, replyTo = null, retries = 3) => {
-    const mailOptions = {
-        from: process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
-        to: to,
+    const fromEmail = process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>';
+    console.log('DEBUG: Sending API email from:', fromEmail);
+    console.log('DEBUG: Sending API email to:', to);
+
+    const payload = {
+        from: fromEmail,
+        to: [to],
         subject: subject,
         html: htmlBody,
     };
-    console.log('DEBUG: Sending email from:', mailOptions.from);
-    console.log('DEBUG: Sending email to:', mailOptions.to);
     if (replyTo) {
-        mailOptions.replyTo = replyTo;
+        payload.reply_to = replyTo;
     }
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            const info = await transporter.sendMail(mailOptions);
-            console.log(`Email sent successfully on attempt ${attempt}: ${info.messageId}`);
-            logEvent(eventType, { to, subject, status: 'success', messageId: info.messageId });
+            const response = await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.SMTP_PASS}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Resend API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(`Email sent successfully via API on attempt ${attempt}: ${data.id}`);
+            logEvent(eventType, { to, subject, status: 'success', messageId: data.id });
             return true;
         } catch (error) {
-            console.error(`Attempt ${attempt} to send email failed:`, error.message);
+            console.error(`Attempt ${attempt} to send email via API failed:`, error.message);
             if (attempt === retries) {
                 logEvent(eventType, { to, subject, status: 'failed', error: error.message });
                 console.error('All retries failed.');
