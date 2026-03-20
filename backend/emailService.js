@@ -23,13 +23,17 @@ const logEvent = (eventType, details) => {
     });
 };
 
-const sendEmail = async (to, subject, htmlBody, eventType, retries = 3) => {
+const sendEmail = async (to, subject, htmlBody, eventType, options = {}) => {
+    const retries = options.retries || 3;
     const mailOptions = {
-        from: process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
+        from: options.from || process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
         to: to,
         subject: subject,
         html: htmlBody,
     };
+    if (options.replyTo) {
+        mailOptions.replyTo = options.replyTo;
+    }
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -128,8 +132,16 @@ const sendNewRequestEmails = async (clientData, projectId) => {
     `;
 
     try {
+        // Extract plain email from FROM_EMAIL for the custom from field
+        const defaultFrom = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+        const baseEmail = defaultFrom.includes('<') ? defaultFrom.split('<')[1].replace('>', '') : defaultFrom;
+        const customFrom = `"${clientData.name} (via Visual Pro)" <${baseEmail.trim()}>`;
+
         await Promise.all([
-            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request submitted (admin)'),
+            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request submitted (admin)', { 
+                replyTo: clientData.email,
+                from: customFrom
+            }),
             sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request submitted (client)')
         ]);
     } catch (err) {

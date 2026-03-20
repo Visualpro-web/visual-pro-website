@@ -424,7 +424,7 @@ app.post('/api/clients', async (req, res) => {
 
         const newProject = {
             id: newId,
-            status: 'Request Received',
+            status: 'Request Submitted',
             createdAt: new Date().toISOString(),
             ...payload
         };
@@ -608,6 +608,20 @@ app.post('/api/create-checkout-session', async (req, res) => {
 
     } catch (err) {
         console.error('Stripe Session Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * Admin: Destroy Entire Database
+ */
+app.delete('/api/admin/nuke-db', adminAuth, async (req, res) => {
+    try {
+        await Project.deleteMany({});
+        await Client.deleteMany({});
+        broadcastEvent('project_deleted', { id: 'all' });
+        res.json({ message: 'DB successfully reset.' });
+    } catch(err) {
         res.status(500).json({ error: err.message });
     }
 });

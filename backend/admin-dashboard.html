@@ -58,10 +58,52 @@
         }
         
         .sidebar h2 {
-            margin: 0 0 40px 30px;
+            margin: 0 0 30px 30px;
             font-weight: 700;
             letter-spacing: -0.5px;
             font-size: 1.5rem;
+        }
+
+        /* Admin Profile UI */
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 0 30px 30px 30px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .profile-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--amber-start);
+            background: rgba(255, 123, 0, 0.1);
+            color: var(--amber-start);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            box-shadow: 0 0 15px var(--amber-glow);
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .profile-name {
+            font-weight: 600;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        .profile-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .nav-btn {
@@ -366,8 +408,7 @@
             <div class="modal-item">
                 <label class="modal-label">Post New Status Update</label>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="m-update-msg" class="modal-input" placeholder="e.g. Filming has started!">
-                    <button class="btn btn-amber" onclick="postUpdate()">Post</button>
+                    <input type="text" id="m-update-msg" class="modal-input" placeholder="e.g. Filming has started! (Saves on Update)">
                 </div>
             </div>
 
@@ -424,12 +465,23 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Visual <span class="text-gradient">Pro</span></h2>
+        
+        <!-- Admin Profile Image -->
+        <div class="admin-profile">
+            <div class="profile-avatar">A</div>
+            <div class="profile-info">
+                <div class="profile-name">Admin User</div>
+                <div class="profile-role">Visual Pro Team</div>
+            </div>
+        </div>
+        
         <button class="nav-btn active" data-view="Pending">Pending Requests</button>
         <button class="nav-btn" data-view="Active">Active Projects</button>
         <button class="nav-btn" data-view="Completed">Completed Projects</button>
         <button class="nav-btn" data-view="Rejected">Rejected</button>
         <button class="nav-btn" data-view="Cancelled">Cancelled</button>
         <button class="nav-btn" data-view="Clients" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">Client Database</button>
+        <button class="btn btn-danger" style="margin: 20px; width: calc(100% - 40px);" onclick="nukeDatabase()">WIPE DATABASE</button>
     </div>
 
     <!-- Main Engine -->
@@ -624,8 +676,7 @@
                 
                 let actionsHTML = '';
                 if (nextStep) {
-                    // We remove onclick and use event listener for more reliability
-                    actionsHTML += `<button class="action-amber move-btn">Move to ${nextStep}</button>`;
+                    actionsHTML += `<button class="action-amber move-btn" onclick="advanceStep('${p.id}', '${nextStep}', this)">Move to ${nextStep}</button>`;
                 }
                 if (currentView === 'Active' || currentView === 'Completed') {
                     actionsHTML += `<button class="action-approve" onclick="openManagePortal('${p.id}')">Manage Portal</button>`;
@@ -638,12 +689,6 @@
                 card.innerHTML += `
                     <div class="card-actions">${actionsHTML}</div>
                 `;
-                
-                // Add event listener to the "Move to" button if it exists
-                const moveBtn = card.querySelector('.move-btn');
-                if (moveBtn) {
-                    moveBtn.addEventListener('click', () => advanceStep(p.id, NEXT_STEPS[p.status], moveBtn));
-                }
                 
                 container.appendChild(card);
             });
@@ -712,8 +757,13 @@
                 type: 'video'
             })).filter(d => d.label && d.url);
 
-            await updateProject(selectedProjectId, { deliverables: delivs });
-            alert('Deliverables Saved');
+            const newUpdate = document.getElementById('m-update-msg').value;
+            const payload = { deliverables: delivs };
+            if (newUpdate) payload.newUpdate = newUpdate;
+
+            await updateProject(selectedProjectId, payload);
+            document.getElementById('m-update-msg').value = '';
+            alert('Changes Saved Successfully');
             closeModal();
         };
 
@@ -775,6 +825,18 @@
                 const filtered = allProjects.filter(p => belongsToView(p, currentView));
                 for(let p of filtered) await fetch(`/api/admin/projects/${p.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
             }
+        };
+
+        const nukeDatabase = async () => {
+            if(!confirm('DANGER: This will delete ALL clients and projects permanently! Are you sure?')) return;
+            const pass = prompt('Enter Admin Password to execute Wipe:');
+            if (pass !== '01270101') return alert('Incorrect password.');
+            try {
+                const res = await fetch('/api/admin/nuke-db', {
+                    method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' }
+                });
+                if(res.ok) { alert('System wiped cleanly.'); fetchData(); }
+            } catch(e) { console.error(e); }
         };
 
         const openUploadModal = (id) => {
