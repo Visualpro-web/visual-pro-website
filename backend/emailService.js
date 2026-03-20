@@ -200,5 +200,6 @@ const sendStatusUpdateEmail = async (clientData, newStatus) => {
 
 module.exports = {
     sendNewRequestEmails,
-    sendStatusUpdateEmail
+    sendStatusUpdateEmail,
+    sendProjectDeliveryEmail
 };

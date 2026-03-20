@@ -386,6 +386,25 @@
         </div>
     </div>
 
+    <!-- Deliverables Upload Modal -->
+    <div id="upload-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); z-index: 2500; align-items: center; justify-content: center;">
+        <div class="modal-body">
+            <h2 style="margin-top: 0; margin-bottom: 20px;">Send Delivery To Client</h2>
+            <p style="color:var(--text-muted); margin-bottom: 30px;">This will upload files and email the client a secure download link.</p>
+            <form id="upload-form">
+                <input type="hidden" id="u-project-id">
+                <div class="modal-item">
+                    <label class="modal-label">Upload Files & Videos</label>
+                    <input type="file" id="u-files" multiple class="modal-input" style="background:transparent; border: 1px dashed var(--amber-start); padding: 30px; text-align: center;">
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 30px;">
+                    <button type="submit" class="btn btn-amber" style="flex:2" id="u-btn">Upload & Send</button>
+                    <button type="button" class="btn" style="flex:1" onclick="closeUploadModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Visual <span class="text-gradient">Pro</span></h2>
@@ -394,6 +413,7 @@
         <button class="nav-btn" data-view="Completed">Completed Projects</button>
         <button class="nav-btn" data-view="Rejected">Rejected</button>
         <button class="nav-btn" data-view="Cancelled">Cancelled</button>
+        <button class="nav-btn" data-view="Clients" style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">Client Database</button>
     </div>
 
     <!-- Main Engine -->
@@ -417,6 +437,7 @@
     <script>
         let currentView = 'Pending';
         let allProjects = [];
+        let allClients = [];
         let sseConnection = null;
         let selectedProjectId = null;
 
@@ -491,10 +512,12 @@
         const fetchData = async () => {
             try {
                 const res = await fetch('/api/admin/projects', { headers: { 'Authorization': 'Bearer 01270101' } });
-                if(res.ok) {
-                    allProjects = await res.json();
-                    renderCards();
-                }
+                if(res.ok) allProjects = await res.json();
+                
+                const cres = await fetch('/api/admin/clients', { headers: { 'Authorization': 'Bearer 01270101' } });
+                if(cres.ok) allClients = await cres.json();
+                
+                renderCards();
             } catch (err) { console.error(err); }
         };
 
@@ -530,6 +553,35 @@
         const renderCards = () => {
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
+            
+            if (currentView === 'Clients') {
+                if (allClients.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-muted);">No clients registered yet.</p>';
+                    return;
+                }
+                allClients.forEach(c => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:20px; margin-bottom:20px;">
+                            <div style="width:60px; height:60px; border-radius:50%; border:2px solid var(--amber-start); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold; color:var(--amber-start); overflow:hidden;">
+                                ${c.profileImage ? '<img src="' + c.profileImage + '" style="width:100%;height:100%;object-fit:cover;">' : c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 style="margin:0;">${c.name}</h3>
+                                <div style="color:var(--text-muted); font-size:0.9rem;">${c.email}</div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">Registered: ${new Date(c.createdAt).toLocaleDateString()}</div>
+                        <div class="card-actions" style="margin-top:20px;">
+                            <button class="action-amber" onclick="alert('Viewing Client Projects is not implemented yet in this demo.')">View Projects</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                return;
+            }
+
             const filtered = allProjects.filter(p => belongsToView(p, currentView));
             filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -556,6 +608,7 @@
                 }
                 actionsHTML += `<button onclick="deleteProject('${p.id}')">Delete</button>`;
 
+                card.innerHTML += `
                     <div class="card-actions">${actionsHTML}</div>
                 `;
                 
@@ -678,6 +731,48 @@
                 for(let p of filtered) await fetch(`/api/admin/projects/${p.id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer 01270101' } });
             }
         };
+
+        const openUploadModal = (id) => {
+            document.getElementById('u-project-id').value = id;
+            document.getElementById('upload-modal').style.display = 'flex';
+        };
+
+        const closeUploadModal = () => {
+            document.getElementById('upload-modal').style.display = 'none';
+            document.getElementById('upload-form').reset();
+        };
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('u-project-id').value;
+            const files = document.getElementById('u-files').files;
+            if (files.length === 0) { alert('Select files to upload.'); return; }
+            
+            const btn = document.getElementById('u-btn');
+            btn.textContent = 'Uploading...';
+            btn.disabled = true;
+
+            const fd = new FormData();
+            for(let f of files) fd.append('deliverables', f);
+
+            try {
+                const res = await fetch(`/api/admin/projects/${id}/deliverables`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer 01270101' },
+                    body: fd
+                });
+                if (res.ok) {
+                    alert('Files uploaded & Client notified!');
+                    closeUploadModal();
+                    fetchData();
+                } else {
+                    alert('Upload failed.');
+                }
+            } catch(err) { alert('Error: ' + err); }
+            
+            btn.textContent = 'Upload & Send';
+            btn.disabled = false;
+        });
 
     </script>
 </body>

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Portal | Visual Pro</title>
+    <style>
+        :root {
+            --bg-color: #0A0A0A;
+            --surface: #151515;
+            --surface-light: #202020;
+            --text-primary: #FFFFFF;
+            --text-secondary: #A0A0A0;
+            --amber-start: #FF7B00;
+            --amber-end: #FFB000;
+            --danger: #FF3B30;
+            --success: #34C759;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --font-main: 'Inter', -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-container {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,123,0,0.1);
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--surface-light);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--amber-start);
+            box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
+        }
+
+        /* Avatar Upload Style */
+        .avatar-upload-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--amber-start);
+            background: var(--surface-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(255, 123, 0, 0.2);
+            color: var(--amber-start);
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-btn {
+            background: transparent;
+            color: var(--amber-start);
+            border: 1px solid var(--amber-start);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            background: rgba(255, 123, 0, 0.1);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-md);
+            background: linear-gradient(135deg, var(--amber-start), var(--amber-end));
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button.main-btn:hover {
+            box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .toggle-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .toggle-link:hover {
+            color: var(--amber-start);
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.85rem;
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container" id="authBox">
+        <h1 id="formTitle">Welcome Back</h1>
+        <p class="subtitle" id="formSubtitle">Sign in to your client portal.</p>
+        
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="authForm">
+            <!-- Register Only Fields -->
+            <div id="registerFields" style="display: none;">
+                <div class="avatar-upload-container">
+                    <div class="avatar-preview" id="avatarPreview">?</div>
+                    <div>
+                        <label for="profileImage" class="upload-btn">Upload Photo</label>
+                        <input type="file" id="profileImage" name="profileImage" accept="image/png, image/jpeg">
+                        <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:5px;">JPG or PNG</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name" placeholder="John Doe">
+                </div>
+            </div>
+
+            <!-- Common Fields -->
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="client@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="main-btn" id="submitBtn">Sign In</button>
+        </form>
+
+        <a class="toggle-link" id="toggleMode">Don't have an account? <span>Register here</span></a>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+
+        const authForm = document.getElementById('authForm');
+        const toggleMode = document.getElementById('toggleMode');
+        const formTitle = document.getElementById('formTitle');
+        const formSubtitle = document.getElementById('formSubtitle');
+        const registerFields = document.getElementById('registerFields');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        const profileImageInput = document.getElementById('profileImage');
+        const avatarPreview = document.getElementById('avatarPreview');
+        const nameInput = document.getElementById('name');
+
+        // Toggle Modes
+        toggleMode.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            errorMsg.textContent = '';
+            authForm.reset();
+            avatarPreview.innerHTML = '?';
+
+            if (isLoginMode) {
+                formTitle.textContent = 'Welcome Back';
+                formSubtitle.textContent = 'Sign in to your client portal.';
+                registerFields.style.display = 'none';
+                submitBtn.textContent = 'Sign In';
+                toggleMode.innerHTML = `Don't have an account? <span>Register here</span>`;
+                nameInput.removeAttribute('required');
+            } else {
+                formTitle.textContent = 'Create Account';
+                formSubtitle.textContent = 'Set up your visual production portal.';
+                registerFields.style.display = 'block';
+                submitBtn.textContent = 'Register';
+                toggleMode.innerHTML = `Already have an account? <span>Sign In</span>`;
+                nameInput.setAttribute('required', 'true');
+            }
+        });
+
+        // Image Preview and Default Avatar Generation
+        profileImageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        nameInput.addEventListener('input', function() {
+            if(!profileImageInput.files[0] && this.value.trim().length > 0) {
+                avatarPreview.innerHTML = this.value.trim().charAt(0).toUpperCase();
+            } else if (!profileImageInput.files[0]) {
+                avatarPreview.innerHTML = '?';
+            }
+        });
+
+        // Form Submission
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMsg.textContent = '';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                if (isLoginMode) {
+                    const res = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error);
+                    
+                    localStorage.setItem('vp_token', data.token);
+                    window.location.href = '/project-status'; // Redirect to Client Dashboard
+                } else {
+                    const formData = new FormData();
+                    formData.append('email', email);
+                    formData.append('password', password);
+                    formData.append('name', nameInput.value);
+                    
+                    if (profileImageInput.files[0]) {
+                        formData.append('profileImage', profileImageInput.files[0]);
+                    }
+
+                    const res = await fetch('/api/auth/register', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error);
+
+                    localStorage.setItem('vp_token', data.token);
+                    window.location.href = '/project-status'; // Redirect to Client Dashboard
+                }
+            } catch (err) {
+                errorMsg.textContent = err.message || 'An error occurred';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = isLoginMode ? 'Sign In' : 'Register';
+            }
+        });
+    </script>
+</body>
+</html>

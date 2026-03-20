@@ -466,3 +466,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Client Auth Check & Auto-fill
+async function checkClientAuth() {
+    const token = localStorage.getItem('vp_token');
+    if (!token) return;
+
+    try {
+        const res = await fetch('/api/client/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            const user = await res.json();
+            
+            // 1. Update Navbar
+            const navPortal = document.getElementById('nav-portal-link');
+            if (navPortal) {
+                const isEs = document.getElementById('lang-es') && document.getElementById('lang-es').classList.contains('active');
+                const pText = isEs ? 'Mi Portal' : 'My Portal';
+                let avatarHtml = '';
+                if (user.profileImage) {
+                    avatarHtml = `<img src="${user.profileImage}" class="profile-avatar" style="width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:8px; display:inline-block;">`;
+                } else {
+                    avatarHtml = `<div class="profile-avatar" style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:var(--surface-light);color:var(--amber-start);font-weight:bold;font-size:0.9rem;vertical-align:middle;margin-right:8px;">${user.name.charAt(0).toUpperCase()}</div>`;
+                }
+                navPortal.innerHTML = `<a href="/project-status" style="display:flex;align-items:center;" class="hover-underline">${avatarHtml} ${pText}</a>`;
+            }
+
+            // 2. Update Booking Form
+            const bookInfo = document.getElementById('logged-in-user-info-booking');
+            if (bookInfo) {
+                bookInfo.style.display = 'flex';
+                document.getElementById('logged-in-name-booking').textContent = user.name;
+                document.getElementById('logged-in-email-booking').textContent = user.email;
+                const avaBook = document.getElementById('logged-in-avatar-booking');
+                if(user.profileImage) avaBook.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;">`;
+                else avaBook.innerHTML = user.name.charAt(0).toUpperCase();
+
+                const bEmail = document.getElementById('book-email');
+                if(bEmail) { bEmail.value = user.email; bEmail.readOnly = true; bEmail.style.opacity = '0.7'; }
+                const bName = document.getElementById('book-name');
+                if(bName) { bName.value = user.name; }
+            }
+
+            // 3. Update Project Form
+            const projInfo = document.getElementById('logged-in-user-info-project');
+            if (projInfo) {
+                projInfo.style.display = 'flex';
+                document.getElementById('logged-in-name-project').textContent = user.name;
+                document.getElementById('logged-in-email-project').textContent = user.email;
+                const avaProj = document.getElementById('logged-in-avatar-project');
+                if(user.profileImage) avaProj.innerHTML = `<img src="${user.profileImage}" style="width:100%;height:100%;object-fit:cover;">`;
+                else avaProj.innerHTML = user.name.charAt(0).toUpperCase();
+
+                const pEmail = document.getElementById('proj-email');
+                if(pEmail) { pEmail.value = user.email; pEmail.readOnly = true; pEmail.style.opacity = '0.7'; }
+                const pName = document.getElementById('proj-name');
+                if(pName) { pName.value = user.name; }
+            }
+        } else {
+            localStorage.removeItem('vp_token');
+        }
+    } catch (e) {
+        console.error('Auth Check Error', e);
+    }
+}
+document.addEventListener('DOMContentLoaded', checkClientAuth);

@@ -4,13 +4,16 @@ const path = require('path');
 require('dotenv').config();
 
 const LOGS_DIR = path.join(__dirname, '..', 'visualpro-data', 'email-logs');
-// Ensure logs dir exists - handle read-only filesystems in cloud
+const AVATARS_DIR = path.join(__dirname, '..', 'visualpro-data', 'clients', 'avatars');
+const DELIVERABLES_DIR = path.join(__dirname, '..', 'visualpro-data', 'projects', 'deliverables');
+
+// Ensure directories exist - handle read-only filesystems in cloud
 try {
-    if (!fs.existsSync(LOGS_DIR)) {
-        fs.mkdirSync(LOGS_DIR, { recursive: true });
-    }
+    if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
+    if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
+    if (!fs.existsSync(DELIVERABLES_DIR)) fs.mkdirSync(DELIVERABLES_DIR, { recursive: true });
 } catch (e) {
-    console.error('Warning: could not create logs directory:', e.message);
+    console.error('Warning: could not create data directories:', e.message);
 }
 
 const connectDB = async () => {
@@ -81,6 +84,17 @@ const credentialSchema = new mongoose.Schema({
 
 const Credential = mongoose.model('Credential', credentialSchema);
 
+const clientSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
+    profileImage: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Client = mongoose.model('Client', clientSchema);
+
 let mockProjects = [];
 
 const getProjects = async () => {
@@ -135,6 +149,9 @@ module.exports = {
     getProjectById,
     deleteProject,
     LOGS_DIR,
+    AVATARS_DIR,
+    DELIVERABLES_DIR,
     Project,
-    Credential
+    Credential,
+    Client
 };
