@@ -287,7 +287,7 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
         
         let profileImage = '';
         if (req.file) {
-            profileImage = `/avatars/${req.file.filename}`;
+            profileImage = req.file.path && req.file.path.startsWith('http') ? req.file.path : `/avatars/${req.file.filename}`;
         } else {
             // Automatically handled by client-side fallback if empty, but we can store empty
             profileImage = ''; 
@@ -536,11 +536,12 @@ app.post('/api/admin/projects/:id/deliverables', adminAuth, upload.array('delive
         
         if (req.files) {
             req.files.forEach(file => {
+                const url = file.path && file.path.startsWith('http') ? file.path : `/deliverables/${file.filename}`;
                 project.deliverables.push({
                     label: file.originalname,
-                    url: `/deliverables/${file.filename}`,
-                    size: (file.size / (1024*1024)).toFixed(2) + ' MB',
-                    type: file.mimetype.startsWith('video') ? 'video' : 'file'
+                    url: url,
+                    size: file.size ? (file.size / (1024*1024)).toFixed(2) + ' MB' : 'Unknown',
+                    type: file.mimetype ? (file.mimetype.startsWith('video') ? 'video' : 'file') : 'file'
                 });
             });
         }
