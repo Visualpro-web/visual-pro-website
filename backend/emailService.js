@@ -4,9 +4,12 @@ const path = require('path');
 const { LOGS_DIR } = require('./dataService');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
+const smtpPort = parseInt(process.env.SMTP_PORT) || 465;
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.resend.com',
-    port: process.env.SMTP_PORT || 465,
+    port: smtpPort,
+    secure: smtpPort === 465, // true for 465, false for other ports (like 587)
     auth: {
         user: process.env.SMTP_USER || 'resend',
         pass: process.env.SMTP_PASS
@@ -23,16 +26,17 @@ const logEvent = (eventType, details) => {
     });
 };
 
-const sendEmail = async (to, subject, htmlBody, eventType, options = {}) => {
-    const retries = options.retries || 3;
+const sendEmail = async (to, subject, htmlBody, eventType, replyTo = null, retries = 3) => {
     const mailOptions = {
-        from: options.from || process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
+        from: process.env.FROM_EMAIL || 'Visual Pro <onboarding@resend.dev>',
         to: to,
         subject: subject,
         html: htmlBody,
     };
-    if (options.replyTo) {
-        mailOptions.replyTo = options.replyTo;
+    console.log('DEBUG: Sending email from:', mailOptions.from);
+    console.log('DEBUG: Sending email to:', mailOptions.to);
+    if (replyTo) {
+        mailOptions.replyTo = replyTo;
     }
 
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -54,7 +58,7 @@ const sendEmail = async (to, subject, htmlBody, eventType, options = {}) => {
 };
 
 const wrapEmailTemplate = (content, projectId = null) => {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 10000}`;
     return `
 <!DOCTYPE html>
 <html>
@@ -105,7 +109,7 @@ const wrapEmailTemplate = (content, projectId = null) => {
 
 const sendNewRequestEmails = async (clientData, projectId) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'munelstg0@gmail.com';
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 10000}`;
     
     // Admin Notif
     const adminSubject = `New Request: ${clientData.name} – VP`;
@@ -132,18 +136,8 @@ const sendNewRequestEmails = async (clientData, projectId) => {
     `;
 
     try {
-        // Extract plain email from FROM_EMAIL for the custom from field
-        const defaultFrom = process.env.FROM_EMAIL || 'onboarding@resend.dev';
-        const baseEmail = defaultFrom.includes('<') ? defaultFrom.split('<')[1].replace('>', '') : defaultFrom;
-        const customFrom = `"${clientData.name} (via Visual Pro)" <${baseEmail.trim()}>`;
-
-        await Promise.all([
-            sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request submitted (admin)', { 
-                replyTo: clientData.email,
-                from: customFrom
-            }),
-            sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request submitted (client)')
-        ]);
+        await sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, projectId), 'request submitted (admin)');
+        await sendEmail(clientData.email, clientSubject, wrapEmailTemplate(clientContent, projectId), 'request submitted (client)');
     } catch (err) {
         console.error('Error sending emails:', err.message);
     }
@@ -207,7 +201,7 @@ const sendStatusUpdateEmail = async (clientData, newStatus) => {
         `;
     }
 
-    sendEmail(clientData.email, subject, wrapEmailTemplate(content, clientData.id), `status changed to ${newStatus}`);
+    await sendEmail(clientData.email, subject, wrapEmailTemplate(content, clientData.id), `status changed to ${newStatus}`);
 };
 
 /**
@@ -220,11 +214,11 @@ async function sendProjectDeliveryEmail(client, project) {
         <p style="font-size: 16px; color: #ccc;">Your project <strong>${project.projectTitle || project.id}</strong> has been completed and is ready for download.</p>
         <p style="font-size: 16px; color: #ccc;">You can access your files securely in your client portal.</p>
         <div style="margin: 30px 0;">
-            <a href="${process.env.BASE_URL || 'https://visualpro.cloud-ip.cc'}/portal" style="display:inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 20px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Access My Project</a>
+            <a href="${process.env.BASE_URL || `http://localhost:${process.env.PORT || 10000}`}/portal" style="display:inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 20px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Access My Project</a>
         </div>
     `;
 
-    sendEmail(client.email, subject, wrapEmailTemplate(content, project.id), 'Project Delivered');
+    await sendEmail(client.email, subject, wrapEmailTemplate(content, project.id), 'Project Delivered');
 }
 
 module.exports = {

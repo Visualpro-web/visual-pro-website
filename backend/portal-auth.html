@@ -291,6 +291,7 @@
             const password = document.getElementById('password').value;
 
             try {
+                let data;
                 if (isLoginMode) {
                     const res = await fetch('/api/auth/login', {
                         method: 'POST',
@@ -298,16 +299,16 @@
                         body: JSON.stringify({ email, password })
                     });
                     
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error);
+                    try { data = await res.json(); } catch(e) { data = { error: 'Server Error' }; }
+                    if (!res.ok) throw new Error(data.error || 'Login failed');
                     
                     localStorage.setItem('vp_token', data.token);
-                    window.location.href = '/project-status'; // Redirect to Client Dashboard
+                    window.location.href = '/project-status';
                 } else {
                     const formData = new FormData();
                     formData.append('email', email);
                     formData.append('password', password);
-                    formData.append('name', nameInput.value);
+                    formData.append('name', nameInput.value.trim());
                     
                     if (profileImageInput.files[0]) {
                         formData.append('profileImage', profileImageInput.files[0]);
@@ -318,11 +319,11 @@
                         body: formData
                     });
 
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.error);
+                    try { data = await res.json(); } catch(e) { data = { error: 'Server Error' }; }
+                    if (!res.ok) throw new Error(data.error || 'Registration failed');
 
                     localStorage.setItem('vp_token', data.token);
-                    window.location.href = '/project-status'; // Redirect to Client Dashboard
+                    window.location.href = '/project-status';
                 }
             } catch (err) {
                 errorMsg.textContent = err.message || 'An error occurred';

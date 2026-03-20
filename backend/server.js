@@ -1,10 +1,10 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const multer = require('multer');
 const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential, Client, getClients, getClientByEmail, getClientById, saveClient, deleteClient, wipeDatabase, getCredentials, getCredentialById, saveCredential } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock');
 const upload = require('./middlewares/upload');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -23,6 +23,12 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// Content Security Policy (Basic)
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data: blob:; connect-src *;");
+    next();
+});
 
 // Serve main website front-end
 app.use(express.static(path.join(__dirname, '../')));
@@ -73,7 +79,7 @@ app.get('/api/health', (req, res) => {
 });
 // === WebAuthn Biometric Auth Endpoints ===
 const rpName = 'Visual Pro';
-const origin = process.env.BASE_URL || 'http://localhost:3000';
+const origin = process.env.BASE_URL || `http://localhost:${PORT}`;
 let rpID = 'localhost';
 try { rpID = new URL(origin).hostname; } catch(e) {}
 
@@ -122,16 +128,17 @@ app.post('/api/admin/auth/register-verify', adminAuth, async (req, res) => {
             const { credentialID, credentialPublicKey, counter } = registrationInfo;
 
             // Save credential to DB
-            const newCredential = new Credential({
+            const credData = {
                 id: isoBase64URL.fromBuffer(credentialID),
                 publicKey: Buffer.from(credentialPublicKey),
                 counter,
                 deviceType: 'singleDevice',
                 backedUp: true,
                 transports: body.response.transports || ['internal'],
-            });
+                createdAt: new Date()
+            };
 
-            await newCredential.save();
+            await saveCredential(credData);
             res.json({ verified: true });
         } else {
             res.status(400).json({ error: 'Verification failed' });
@@ -196,7 +203,7 @@ app.post('/api/admin/auth/login-verify', async (req, res) => {
         if (verification.verified) {
             // Update counter
             credential.counter = verification.authenticationInfo.newCounter;
-            await credential.save();
+            await saveCredential(credential);
 
             res.json({ verified: true, token: 'Bearer 01270101' }); // Return valid token
         } else {
@@ -227,6 +234,11 @@ app.get('/portal', (req, res) => {
 
 app.get('/track-project', (req, res) => {
     res.sendFile(path.join(__dirname, 'track-project.html'));
+});
+
+// Fix for subagent's 404
+app.get('/portal/dashboard', (req, res) => {
+    res.redirect('/project-status');
 });
 
 // Basic Auth Middleware for protecting Admin Endpoints
@@ -291,18 +303,20 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
             profileImage = ''; 
         }
         
-        const newClient = new Client({
+        const newClientData = {
             id: 'C-' + Date.now(),
             name,
             email: email.toLowerCase(),
             passwordHash,
-            profileImage
-        });
+            profileImage,
+            createdAt: new Date()
+        };
         
-        await newClient.save();
+        const success = await saveClient(newClientData);
+        if (!success) throw new Error('Failed to save client data');
         
-        const token = jwt.sign({ id: newClient.id }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ message: 'Registered successfully', token, user: { name: newClient.name, email: newClient.email, profileImage: newClient.profileImage } });
+        const token = jwt.sign({ id: newClientData.id }, JWT_SECRET, { expiresIn: '7d' });
+        res.status(201).json({ message: 'Registered successfully', token, user: { name: newClientData.name, email: newClientData.email, profileImage: newClientData.profileImage } });
     } catch(err) {
         console.error('Register API Error:', err);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -353,7 +367,7 @@ app.delete('/api/client/me', clientAuth, async (req, res) => {
 
 app.get('/api/client/projects', clientAuth, async (req, res) => {
     try {
-        const client = await Client.findOne({ id: req.clientId });
+        const client = await getClientById(req.clientId);
         if (!client) return res.status(404).json({ error: 'Client not found' });
         
         const allProjects = await getProjects();
@@ -445,7 +459,7 @@ app.post('/api/clients', async (req, res) => {
         if(!success) throw new Error('Failed to save to VisualPro Data');
 
         // Async emails
-        sendNewRequestEmails(payload, newProject.id);
+        await sendNewRequestEmails(payload, newProject.id);
 
         // Broadcast to Dashboard
         broadcastEvent('project_received', { id: newProject.id });
@@ -561,7 +575,7 @@ app.post('/api/admin/projects/:id/deliverables', adminAuth, upload.array('delive
         await saveProject(project);
         broadcastEvent('project_updated', { id: project.id, status: project.status, project });
         
-        const client = await Client.findOne({ email: project.email.toLowerCase() });
+        const client = await getClientByEmail(project.email.toLowerCase());
         if (client) {
             const { sendProjectDeliveryEmail } = require('./emailService');
             sendProjectDeliveryEmail(client, project);
@@ -575,52 +589,74 @@ app.post('/api/admin/projects/:id/deliverables', adminAuth, upload.array('delive
 });
 
 /**
- * Stripe: Create Checkout Session
+ * Client Portal API: Upload Payment Receipt
  */
-app.post('/api/create-checkout-session', async (req, res) => {
+/**
+ * Client Portal API: Upload Payment Receipt
+ */
+app.post('/api/projects/:id/receipt', clientAuth, upload.single('paymentReceipt'), async (req, res) => {
     try {
-        const { projectId, type } = req.body; // type: 'deposit' or 'final'
-        const project = await getProjectById(projectId);
-
-        if (!project || !project.price) {
-            return res.status(400).json({ error: 'Project not found or price not set' });
-        }
-
-        const effectivePrice = Math.max(0, project.price - (project.discount || 0));
-        const amount = type === 'deposit' ? Math.round(effectivePrice / 2) : Math.round(effectivePrice / 2);
-        const reqOrigin = req.headers.origin || 'https://visualpro.cloud-ip.cc';
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
         
-        try {
-            const session = await stripe.checkout.sessions.create({
-                payment_method_types: ['card'],
-                line_items: [{
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: `${type === 'deposit' ? '50% Deposit' : 'Final Balance'} - ${project.id}`,
-                            description: `Payment for project: ${project.projectTitle || project.id}`,
-                        },
-                        unit_amount: amount * 100, // Stripe uses cents
-                    },
-                    quantity: 1,
-                }],
-                mode: 'payment',
-                success_url: `${reqOrigin}/portal?id=${projectId}&payment=success`,
-                cancel_url: `${reqOrigin}/portal?id=${projectId}&payment=cancel`,
-                metadata: {
-                    projectId: project.id,
-                    paymentType: type
-                }
-            });
-            res.json({ id: session.id, url: session.url });
-        } catch (stripeErr) {
-            console.error('Stripe Mock Check:', stripeErr.message);
-            res.json({ id: 'mock', url: `${reqOrigin}/portal?id=${projectId}&payment=success` });
+        // Verify ownership (or match email)
+        const client = await getClientById(req.clientId);
+        if (!client || client.email.toLowerCase() !== project.email.toLowerCase()) {
+            return res.status(403).json({ error: 'Unauthorized to update this project' });
         }
 
+        const receiptUrl = req.file.path && req.file.path.startsWith('http') ? req.file.path : `/visualpro-data/projects/receipts/${req.file.filename}`;
+        
+        // Determine if it's deposit or final based on current status
+        if (project.status === 'Deposit Required') {
+            project.depositReceipt = receiptUrl;
+        } else if (project.status === 'Final Payment Required') {
+            project.finalReceipt = receiptUrl;
+        } else {
+            return res.status(400).json({ error: 'Project is not in a payment stage' });
+        }
+
+        await saveProject(project);
+        
+        // Notify Admin?
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+        
+        res.json({ message: 'Receipt uploaded successfully', receiptUrl });
     } catch (err) {
-        console.error('Stripe Session Error:', err);
-        res.status(500).json({ error: err.message });
+        console.error('Receipt Upload Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Admin API: Verify Manual Payment
+ */
+app.patch('/api/admin/projects/:id/verify-payment', adminAuth, async (req, res) => {
+    try {
+        const { type } = req.body; // 'deposit' or 'final'
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+
+        if (type === 'deposit') {
+            project.depositPaid = true;
+            project.status = 'Project Started';
+        } else if (type === 'final') {
+            project.finalPaid = true;
+            project.status = 'Project Completed';
+        } else {
+            return res.status(400).json({ error: 'Invalid payment type' });
+        }
+
+        await saveProject(project);
+        
+        // Send notification email
+        sendStatusUpdateEmail(project, project.status);
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+
+        res.json({ message: 'Payment verified successfully', project });
+    } catch (err) {
+        console.error('Verify Payment Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
@@ -629,53 +665,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
  */
 app.delete('/api/admin/nuke-db', adminAuth, async (req, res) => {
     try {
-        await Project.deleteMany({});
-        await Client.deleteMany({});
+        await wipeDatabase();
         broadcastEvent('project_deleted', { id: 'all' });
         res.json({ message: 'DB successfully reset.' });
     } catch(err) {
         res.status(500).json({ error: err.message });
-    }
-});
-
-/**
- * Stripe: Webhook
- */
-app.post('/api/webhook/stripe', express.raw({type: 'application/json'}), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    let event;
-
-    try {
-        // In production, use stripe.webhooks.constructEvent
-        // For local development without stripe-cli, we can look at the body directly
-        // but it's less secure. 
-        event = req.body; 
-        
-        if (event.type === 'checkout.session.completed') {
-            const session = event.data.object;
-            const { projectId, paymentType } = session.metadata;
-
-            const project = await getProjectById(projectId);
-            if (project) {
-                if (paymentType === 'deposit') {
-                    project.depositPaid = true;
-                    project.status = 'Project Started';
-                } else if (paymentType === 'final') {
-                    project.finalPaid = true;
-                    project.status = 'Project Completed';
-                }
-                
-                await saveProject(project);
-
-                // Notifications
-                sendStatusUpdateEmail(project, project.status);
-                broadcastEvent('project_updated', { id: project.id, status: project.status, project: project });
-            }
-        }
-
-        res.json({received: true});
-    } catch (err) {
-        res.status(400).send(`Webhook Error: ${err.message}`);
     }
 });
 
@@ -693,6 +687,15 @@ app.delete('/api/admin/projects/:id', adminAuth, async (req, res) => {
     }
 });
 
+
+// Global Error Handler for Multer and other errors
+app.use((err, req, res, next) => {
+    console.error('SERVER ERROR:', err);
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: `Upload error: ${err.message}` });
+    }
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+});
 
 const startServer = async () => {
     console.log('🚀 Starting Visual Pro Server...');

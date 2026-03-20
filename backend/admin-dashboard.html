@@ -381,6 +381,28 @@
 
         .modal-input:focus { border-color: var(--amber-start); }
 
+        .receipt-preview-admin {
+            width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .verify-btn {
+            background: var(--success);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .verify-btn:hover { background: #28b840; }
+
     </style>
 </head>
 <body>
@@ -434,6 +456,14 @@
                     <!-- Deliverable rows -->
                 </div>
                 <button class="btn" style="width: 100%; border-style: dashed;" onclick="addDeliverableRow()">+ Add Deliverable Row</button>
+            </div>
+
+            <div id="m-payment-verify-section" class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px; display:none;">
+                <label class="modal-label" style="display:flex; align-items:center; gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                    Manual Payment Verification
+                </label>
+                <div id="m-receipt-container"></div>
             </div>
 
             <div style="display: flex; gap: 15px; margin-top: 40px; border-top: 1px solid var(--border-light); padding-top: 30px;">
@@ -668,8 +698,12 @@
                         <h3>${p.projectTitle || 'Project ' + p.id.slice(-6)}</h3>
                     </div>
                     <p><strong>Client:</strong> ${p.name || p.email}</p>
-                    <p><strong>Type:</strong> ${p.videoType}</p>
+                    <p><strong>Type:</strong> ${p.projectType || p.videoType}</p>
                     <p><strong>Price:</strong> $${p.price || 0} ${p.discount ? `<span style="color:var(--success); font-size:0.8rem;">(-$${p.discount})</span>` : ''}</p>
+                    ${(p.depositReceipt || p.finalReceipt) ? `<div style="margin-top:10px; background:rgba(255,123,0,0.1); border:1px solid var(--amber-start); color:var(--amber-start); padding:5px 10px; border-radius:8px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Receipt Pending
+                    </div>` : ''}
                 `;
 
                 const nextStep = NEXT_STEPS[p.status];
@@ -727,6 +761,52 @@
             list.innerHTML = '';
             (p.deliverables || []).forEach(d => addDeliverableRow(d.label, d.url));
             if (!(p.deliverables && p.deliverables.length)) addDeliverableRow();
+
+            // Payment Verification Section
+            const verifySection = document.getElementById('m-payment-verify-section');
+            const receiptContainer = document.getElementById('m-receipt-container');
+            const isDepositStage = p.status === 'Deposit Required';
+            const isFinalStage = p.status === 'Final Payment Required';
+            const currentReceipt = isDepositStage ? p.depositReceipt : p.finalReceipt;
+
+            if ((isDepositStage || isFinalStage) && currentReceipt) {
+                verifySection.style.display = 'block';
+                receiptContainer.innerHTML = `
+                    <div style="font-size:0.9rem; margin-bottom:10px; color:var(--text-muted)">
+                        Client has uploaded a receipt for ${isDepositStage ? 'Deposit' : 'Final Payment'}.
+                    </div>
+                    <a href="${currentReceipt}" target="_blank">
+                        <img src="${currentReceipt}" class="receipt-preview-admin" title="Click to view full image">
+                    </a>
+                    <button class="verify-btn" onclick="confirmPayment('${p.id}', '${isDepositStage ? 'deposit' : 'final'}')">
+                        Confirm & Verify Payment
+                    </button>
+                `;
+            } else {
+                verifySection.style.display = 'none';
+            }
+        };
+
+        const confirmPayment = async (id, type) => {
+            if(!confirm(`Confirm payment for ${type}? This will advance the project status automatically.`)) return;
+            try {
+                const res = await fetch(`/api/admin/projects/${id}/verify-payment`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 01270101' },
+                    body: JSON.stringify({ type })
+                });
+                if (res.ok) {
+                    alert('Payment verified! Project status updated.');
+                    closeModal();
+                    await fetchData();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Verification failed');
+                }
+            } catch(e) {
+                console.error(e);
+                alert('Error verifying payment');
+            }
         };
 
         const closeModal = () => document.getElementById('manage-modal').style.display = 'none';

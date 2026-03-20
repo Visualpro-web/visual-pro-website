@@ -6,12 +6,14 @@ require('dotenv').config();
 const LOGS_DIR = path.join(__dirname, '..', 'visualpro-data', 'email-logs');
 const AVATARS_DIR = path.join(__dirname, '..', 'visualpro-data', 'clients', 'avatars');
 const DELIVERABLES_DIR = path.join(__dirname, '..', 'visualpro-data', 'projects', 'deliverables');
+const RECEIPTS_DIR = path.join(__dirname, '..', 'visualpro-data', 'projects', 'receipts');
 
 // Ensure directories exist - handle read-only filesystems in cloud
 try {
     if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
     if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
     if (!fs.existsSync(DELIVERABLES_DIR)) fs.mkdirSync(DELIVERABLES_DIR, { recursive: true });
+    if (!fs.existsSync(RECEIPTS_DIR)) fs.mkdirSync(RECEIPTS_DIR, { recursive: true });
 } catch (e) {
     console.error('Warning: could not create data directories:', e.message);
 }
@@ -52,7 +54,8 @@ const projectSchema = new mongoose.Schema({
     price: { type: Number, default: 0 },
     depositPaid: { type: Boolean, default: false },
     finalPaid: { type: Boolean, default: false },
-    stripeSessionId: String,
+    depositReceipt: String,
+    finalReceipt: String,
     videoUrl: String,
     // Client Portal Features
     projectType: { type: String, default: 'Cinematic Video Production' },
@@ -255,6 +258,7 @@ module.exports = {
     LOGS_DIR,
     AVATARS_DIR,
     DELIVERABLES_DIR,
+    RECEIPTS_DIR,
     Project,
     Credential,
     Client

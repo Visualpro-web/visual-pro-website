@@ -3,7 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { AVATARS_DIR, DELIVERABLES_DIR } = require('../dataService');
+const { AVATARS_DIR, DELIVERABLES_DIR, RECEIPTS_DIR } = require('../dataService');
 
 // Configure Cloudinary only if the credentials are provided
 if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
@@ -15,25 +15,35 @@ if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && proce
 }
 
 const getStorage = () => {
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
+    // Only use Cloudinary if MongoDB is connected (Production environment)
+    if (process.env.MONGODB_URI && process.env.CLOUDINARY_CLOUD_NAME) {
+        console.log('☁️ Using Cloudinary storage for uploads.');
         return new CloudinaryStorage({
             cloudinary: cloudinary,
             params: async (req, file) => {
-                // Cloudinary folder structure
-                const folder = file.fieldname === 'profileImage' ? 'visualpro/avatars' : 'visualpro/deliverables';
+                let folder = 'visualpro/deliverables';
+                if (file.fieldname === 'profileImage') folder = 'visualpro/avatars';
+                if (file.fieldname === 'paymentReceipt') folder = 'visualpro/receipts';
                 return {
                     folder: folder,
-                    resource_type: 'auto', // Handles images, videos, raw files naturally
+                    resource_type: 'auto',
                 };
             },
         });
     } else {
-        // Fallback to local disk storage if no Cloudinary keys
+        console.log('📁 Using local disk storage for uploads (Memory Mode).');
         return multer.diskStorage({
             destination: function (req, file, cb) {
                 if (file.fieldname === 'profileImage') {
+                    if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
                     cb(null, AVATARS_DIR);
+                } else if (file.fieldname === 'paymentReceipt') {
+                    // Assuming RECEIPTS_DIR exists in dataService or fallback
+                    const dir = path.join(__dirname, '..', 'visualpro-data', 'projects', 'receipts');
+                    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+                    cb(null, dir);
                 } else {
+                    if (!fs.existsSync(DELIVERABLES_DIR)) fs.mkdirSync(DELIVERABLES_DIR, { recursive: true });
                     cb(null, DELIVERABLES_DIR);
                 }
             },
@@ -47,7 +57,15 @@ const getStorage = () => {
 
 const upload = multer({ 
     storage: getStorage(),
-    limits: { fileSize: 500 * 1024 * 1024 } // 500MB max limit
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max limit
+    fileFilter: (req, file, cb) => {
+        if (file.fieldname === 'profileImage') {
+            if (!file.mimetype.startsWith('image/')) {
+                return cb(new Error('Only images are allowed for profile pictures!'), false);
+            }
+        }
+        cb(null, true);
+    }
 });
 
 module.exports = upload;
