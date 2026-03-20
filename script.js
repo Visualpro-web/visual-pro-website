@@ -282,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 phone: document.getElementById('proj-phone').value,
                 propertyAddress: document.getElementById('proj-address').value,
                 projectTitle: document.getElementById('proj-type').value,
+                projectType: document.getElementById('proj-type').value,
                 desiredDate: document.getElementById('proj-date').value
             };
 

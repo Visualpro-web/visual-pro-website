@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential, Client } = require('./dataService');
+const { connectDB, saveProject, getProjects, getProjectById, deleteProject, Credential, Client, getClients, getClientByEmail, getClientById, saveClient, wipeDatabase, getCredentials, getCredentialById, saveCredential } = require('./dataService');
 const { sendNewRequestEmails, sendStatusUpdateEmail } = require('./emailService');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_mock');
 const upload = require('./middlewares/upload');
@@ -146,7 +146,7 @@ app.post('/api/admin/auth/register-verify', adminAuth, async (req, res) => {
 
 // 3. Generate Authentication Options
 app.get('/api/admin/auth/login-options', async (req, res) => {
-    const credentials = await Credential.find({});
+    const credentials = await getCredentials();
     
     if (credentials.length === 0) {
         return res.status(400).json({ error: 'No fingerprint registered' });
@@ -176,7 +176,7 @@ app.post('/api/admin/auth/login-verify', async (req, res) => {
     }
 
     try {
-        const credential = await Credential.findOne({ id: body.id });
+        const credential = await getCredentialById(body.id);
         if (!credential) {
             throw new Error('Credential not found');
         }
@@ -278,9 +278,7 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
     try {
         const { name, email, password } = req.body;
         if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
-        
-        const existing = await Client.findOne({ email: email.toLowerCase() });
-        if (existing) return res.status(400).json({ error: 'Email already registered' });
+        const existing = await getClientByEmail(email.toLowerCase());
         
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
@@ -314,7 +312,7 @@ app.post('/api/auth/register', upload.single('profileImage'), async (req, res) =
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        const client = await Client.findOne({ email: email.toLowerCase() });
+        const client = await getClientByEmail(email.toLowerCase());
         if (!client) return res.status(401).json({ error: 'Invalid credentials' });
         
         const isMatch = await bcrypt.compare(password, client.passwordHash);
@@ -330,7 +328,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/client/me', clientAuth, async (req, res) => {
     try {
-        const client = await Client.findOne({ id: req.clientId });
+        const client = await getClientById(req.clientId);
         if (!client) return res.status(404).json({ error: 'Client not found' });
         res.json({ name: client.name, email: client.email, profileImage: client.profileImage });
     } catch (err) {
@@ -450,7 +448,7 @@ app.post('/api/clients', async (req, res) => {
  */
 app.get('/api/admin/clients', adminAuth, async (req, res) => {
     try {
-        const clients = await Client.find({}, '-passwordHash').sort({ createdAt: -1 });
+        const clients = await getClients();
         res.json(clients);
     } catch(err) {
         res.status(500).json({ error: 'Error fetching clients' });

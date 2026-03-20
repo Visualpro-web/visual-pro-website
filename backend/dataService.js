@@ -96,6 +96,8 @@ const clientSchema = new mongoose.Schema({
 const Client = mongoose.model('Client', clientSchema);
 
 let mockProjects = [];
+let mockClients = [];
+let mockCredentials = [];
 
 const getProjects = async () => {
     if(!process.env.MONGODB_URI) return mockProjects;
@@ -142,12 +144,98 @@ const deleteProject = async (id) => {
     }
 };
 
+const getCredentials = async () => {
+    if(!process.env.MONGODB_URI) return mockCredentials;
+    return await Credential.find({}).lean();
+};
+
+const getCredentialById = async (id) => {
+    if(!process.env.MONGODB_URI) return mockCredentials.find(c => c.id === id);
+    return await Credential.findOne({ id }).lean();
+};
+
+const saveCredential = async (credData) => {
+    if(!process.env.MONGODB_URI) {
+        const idx = mockCredentials.findIndex(c => c.id === credData.id);
+        if(idx >= 0) mockCredentials[idx] = credData;
+        else mockCredentials.push(credData);
+        return true;
+    }
+    try {
+        await Credential.findOneAndUpdate(
+            { id: credData.id },
+            credData,
+            { returnDocument: 'after', upsert: true }
+        );
+        return true;
+    } catch(err) {
+        console.error('Error saving credential:', err);
+        return false;
+    }
+};
+
+const getClients = async () => {
+    if(!process.env.MONGODB_URI) return mockClients;
+    return await Client.find({}, '-passwordHash').sort({ createdAt: -1 }).lean();
+};
+
+const getClientByEmail = async (email) => {
+    if(!process.env.MONGODB_URI) return mockClients.find(c => c.email === email);
+    return await Client.findOne({ email }).lean();
+};
+
+const getClientById = async (id) => {
+    if(!process.env.MONGODB_URI) return mockClients.find(c => c.id === id);
+    return await Client.findOne({ id }).lean();
+};
+
+const saveClient = async (clientData) => {
+    if(!process.env.MONGODB_URI) {
+        const idx = mockClients.findIndex(c => c.id === clientData.id || c.email === clientData.email);
+        if(idx >= 0) mockClients[idx] = clientData;
+        else mockClients.push(clientData);
+        return true;
+    }
+    try {
+        await Client.findOneAndUpdate(
+            { email: clientData.email },
+            clientData,
+            { returnDocument: 'after', upsert: true }
+        );
+        return true;
+    } catch(err) {
+        console.error('Error saving client:', err);
+        return false;
+    }
+};
+
+const wipeDatabase = async () => {
+    if(!process.env.MONGODB_URI) {
+        mockProjects = [];
+        mockClients = [];
+        mockCredentials = [];
+        return true;
+    }
+    await Project.deleteMany({});
+    await Client.deleteMany({});
+    await Credential.deleteMany({});
+    return true;
+};
+
 module.exports = {
     connectDB,
     saveProject,
     getProjects,
     getProjectById,
     deleteProject,
+    getClients,
+    getClientByEmail,
+    getClientById,
+    saveClient,
+    wipeDatabase,
+    getCredentials,
+    getCredentialById,
+    saveCredential,
     LOGS_DIR,
     AVATARS_DIR,
     DELIVERABLES_DIR,
