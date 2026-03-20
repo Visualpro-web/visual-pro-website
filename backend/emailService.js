@@ -198,6 +198,33 @@ const sendStatusUpdateEmail = async (clientData, newStatus) => {
     sendEmail(clientData.email, subject, wrapEmailTemplate(content, clientData.id), `status changed to ${newStatus}`);
 };
 
+/**
+ * File Delivery Notification
+ */
+async function sendProjectDeliveryEmail(client, project) {
+    const subject = `Your project is ready - Visual Pro`;
+    const content = `
+        <h2 style="color:#fff;">Hello ${client.name},</h2>
+        <p style="font-size: 16px; color: #ccc;">Your project <strong>${project.projectTitle || project.id}</strong> has been completed and is ready for download.</p>
+        <p style="font-size: 16px; color: #ccc;">You can access your files securely in your client portal.</p>
+        <div style="margin: 30px 0;">
+            <a href="${process.env.BASE_URL || 'https://visualpro.cloud-ip.cc'}/portal" style="display:inline-block; padding: 14px 28px; background: linear-gradient(135deg, #FF7B00, #FFB000); color: #000; font-weight: 600; text-decoration: none; border-radius: 20px; text-transform: uppercase; font-size: 14px; letter-spacing: 1px;">Access My Project</a>
+        </div>
+    `;
+
+    try {
+        await resend.emails.send({
+            from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+            to: client.email,
+            subject: subject,
+            html: wrapEmailTemplate(content, project.id)
+        });
+        logEmailSync('SYSTEM', client.email, 'Project Delivered', 'Success');
+    } catch (err) {
+        logEmailSync('SYSTEM', client.email, 'Project Delivered Error', `Failed: ${err.message}`);
+    }
+}
+
 module.exports = {
     sendNewRequestEmails,
     sendStatusUpdateEmail,
