@@ -403,6 +403,44 @@
         }
         .verify-btn:hover { background: #28b840; }
 
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                position: relative; 
+                padding: 20px; 
+                flex-direction: row; 
+                flex-wrap: wrap; 
+                border-right: none; 
+                border-bottom: 1px solid var(--border-light);
+                align-items: center;
+                justify-content: center;
+            }
+            .sidebar h2 { margin: 0 0 10px 0; width: 100%; text-align: center; }
+            .admin-profile { width: 100%; justify-content: center; padding: 0 0 15px 0; border-bottom: none; }
+            .nav-btn { flex: 1 1 auto; padding: 12px 10px; text-align: center; font-size: 0.9rem; }
+            .nav-btn::before { 
+                width: 100%; height: 3px; left: 0; bottom: 0; top: auto;
+                transform: scaleX(0); transform-origin: center;
+            }
+            .nav-btn.active::before { transform: scaleX(1); }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 20px;
+            }
+            .header-actions { flex-direction: column; gap: 15px; align-items: stretch; text-align: center; margin-bottom: 30px; }
+            .sync-indicator { justify-content: center; }
+            .cards-grid { grid-template-columns: 1fr; }
+            .card { padding: 20px; }
+            
+            .login-box { width: 90%; padding: 30px 20px; }
+            .modal-body { width: 95%; padding: 25px; }
+            .modal-item > div { flex-direction: column; gap: 15px !important; }
+            .modal-input { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -429,7 +467,7 @@
             
             <div class="modal-item">
                 <label class="modal-label">Project Title</label>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex-wrap:wrap;">
                     <input type="text" id="m-p-title" class="modal-input" placeholder="Edit project name...">
                     <button class="btn btn-amber" style="padding:10px 20px; border-radius:12px;" onclick="renameProject()">Rename</button>
                 </div>
@@ -461,7 +499,7 @@
             <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
                 <label class="modal-label">Final Delivery Video</label>
                 <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0;">Provide a direct video link OR upload the final MP4 file.</p>
-                <div style="display: flex; gap: 10px; align-items:flex-start; margin-bottom:15px;">
+                <div style="display: flex; gap: 10px; align-items:center; margin-bottom:15px; flex-wrap:wrap;">
                     <input type="text" id="m-final-video-url" class="modal-input" placeholder="https://vimeo.com/..." style="flex:2">
                     <span style="color:var(--text-muted); align-self:center; font-size:0.8rem;">OR</span>
                     <input type="file" id="m-final-video-file" class="modal-input" accept="video/*" style="flex:1.5; background:transparent; border:1px dashed var(--border-light); padding:10px;">
@@ -883,7 +921,7 @@
 
         const addDeliverableRow = (l = '', u = '') => {
             const div = document.createElement('div');
-            div.style = "display:flex; gap:10px;";
+            div.style = "display:flex; gap:10px; flex-wrap:wrap;";
             div.innerHTML = `
                 <input type="text" placeholder="Label" value="${l}" class="d-label modal-input" style="flex:1">
                 <input type="text" placeholder="URL" value="${u}" class="d-url modal-input" style="flex:2">
