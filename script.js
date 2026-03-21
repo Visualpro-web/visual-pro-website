@@ -15,18 +15,63 @@ const loadVimeoScript = () => {
 document.addEventListener('DOMContentLoaded', async () => {
     await loadVimeoScript();
 
-    // Initialize Hero Background Video
-    const heroVimeoBg = document.querySelector('.vimeo-background');
-    if (heroVimeoBg && window.Vimeo) {
-        const heroPlayer = new Vimeo.Player(heroVimeoBg, {
-            id: heroVimeoBg.dataset.vimeoId,
+    // Helper to create dynamic Vimeo players that adapt to vertical/horizontal videos
+    const createDynamicVimeoPlayer = (container, vimeoId, isHoverPlay = false) => {
+        const target = document.createElement('div');
+        target.className = 'vimeo-dynamic-target';
+        container.appendChild(target);
+
+        const player = new Vimeo.Player(target, {
+            id: vimeoId,
             background: true,
-            autoplay: true,
+            autoplay: !isHoverPlay,
             loop: true,
             muted: true,
             responsive: true,
             dnt: true
         });
+
+        let videoW = 16, videoH = 9;
+
+        const updateSize = () => {
+            const pRect = container.getBoundingClientRect();
+            if(pRect.width === 0 || pRect.height === 0) return;
+            const pRatio = pRect.width / pRect.height;
+            const vRatio = videoW / videoH;
+
+            if (vRatio > pRatio) {
+                target.style.width = '100%';
+                target.style.height = 'auto';
+            } else {
+                target.style.height = '100%';
+                target.style.width = 'auto';
+            }
+            target.style.aspectRatio = `${videoW} / ${videoH}`;
+        };
+
+        player.getVideoWidth().then(w => {
+            player.getVideoHeight().then(h => {
+                if (w && h) {
+                    videoW = w;
+                    videoH = h;
+                    updateSize();
+                }
+            });
+        }).catch(() => {});
+
+        window.addEventListener('resize', updateSize);
+
+        // Fade poster image when playing
+        player.on('play', () => container.classList.add('active-video'));
+        player.on('pause', () => container.classList.remove('active-video'));
+
+        return player;
+    };
+
+    // Initialize Hero Background Video
+    const heroVimeoBg = document.querySelector('.vimeo-background');
+    if (heroVimeoBg && window.Vimeo) {
+        createDynamicVimeoPlayer(heroVimeoBg, heroVimeoBg.dataset.vimeoId, false);
     }
     // Reveal Animations on Scroll
     const reveals = document.querySelectorAll('.reveal');
@@ -55,6 +100,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             navbar.classList.remove('scrolled');
         }
     });
+
+    // Mobile Navigation Hamburger Menu
+    const hamburger = document.querySelector('.hamburger');
+    const navLinks = document.querySelector('.nav-links');
+    
+    if (hamburger && navLinks) {
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('active');
+        });
+        
+        // Close mobile menu when clicking a link
+        navLinks.querySelectorAll('a, button').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navLinks.classList.remove('active');
+            });
+        });
+    }
 
     // Smooth scroll for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -356,15 +420,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         showcaseItems.forEach(item => {
             const container = item.querySelector('.vimeo-container');
             if (container) {
-                const player = new Vimeo.Player(container, {
-                    id: container.dataset.vimeoId,
-                    background: true,
-                    autoplay: false,
-                    loop: true,
-                    muted: true,
-                    responsive: true,
-                    dnt: true
-                });
+                // Initialize as hover logic (autoplay: false) so we can trigger it on scroll
+                const player = createDynamicVimeoPlayer(container, container.dataset.vimeoId, true);
                 vimeoPlayers.set(item.id, player);
             }
         });
@@ -434,15 +491,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     portfolioCards.forEach(card => {
         const wrapper = card.querySelector('.vimeo-card-wrapper');
         if (wrapper && window.Vimeo) {
-            const player = new Vimeo.Player(wrapper, {
-                id: wrapper.dataset.vimeoId,
-                background: true,
-                autoplay: false,
-                loop: true,
-                muted: true,
-                responsive: true,
-                dnt: true
-            });
+            const player = createDynamicVimeoPlayer(wrapper, wrapper.dataset.vimeoId, true);
             gridPlayers.set(card, player);
             
             card.addEventListener('mouseenter', () => {

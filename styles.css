@@ -220,6 +220,22 @@ img {
     background: rgba(255,123,0,0.1);
 }
 
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.hamburger span {
+    width: 30px;
+    height: 2px;
+    background-color: var(--color-text);
+    transition: var(--transition-norm);
+    border-radius: 2px;
+}
+
 .hover-underline {
     position: relative;
     padding-bottom: 4px;
@@ -410,17 +426,35 @@ img {
     transform: scale(1);
 }
 
-.vimeo-background, .vimeo-container, .vimeo-card-wrapper {
+.vimeo-background, .vimeo-container {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: #000;
-    overflow: hidden;
 }
 
-.vimeo-background iframe, 
-.vimeo-container iframe, 
-.vimeo-card-wrapper iframe {
+.vimeo-background, .vimeo-container, .vimeo-card-wrapper {
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vimeo-dynamic-target {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vimeo-container.active-video .showcase-image,
+.vimeo-card-wrapper.active-video .card-image {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.vimeo-dynamic-target iframe {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -428,12 +462,6 @@ img {
     height: 100%;
     transform: translate(-50%, -50%);
     pointer-events: none;
-}
-
-/* Background video might need to be larger to avoid bars if aspect ratio differs */
-.vimeo-background iframe {
-    width: 115%;
-    height: 115%;
 }
 
 .showcase-video, .showcase-image {
@@ -1253,14 +1281,89 @@ footer {
     .hero-content h1 {
         font-size: 2.5rem;
     }
+    .hamburger {
+        display: flex;
+    }
     .nav-links {
-        display: none;
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 75%;
+        height: 100vh;
+        background: rgba(10, 10, 10, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition-norm);
+        z-index: 999;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+    }
+    .nav-links.active {
+        right: 0;
+    }
+    .hamburger.active span:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+    .hamburger.active span:nth-child(2) {
+        opacity: 0;
+    }
+    .hamburger.active span:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
     }
     .cta-content h2 {
         font-size: 2.5rem;
     }
     .cta-actions {
         flex-direction: column;
+        width: 100%;
+    }
+    .cta-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+    .hero-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    .hero-actions .btn {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .video-modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .video-modal-close {
+        top: 1rem;
+        right: 1rem;
+        width: 35px;
+        height: 35px;
+        font-size: 1.2rem;
+    }
+    .modal-project-details {
+        padding: 1.5rem;
+    }
+    .pricing-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    .portfolio-grid-v2 {
+        grid-template-columns: 1fr;
+    }
+    .filter-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .filter-btn {
+        width: 100%;
+    }
+    html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
     }
     .testimonial-text {
         font-size: 1.05rem;
