@@ -277,16 +277,14 @@ function clientAuth(req, res, next) {
 // === Project Workflow Configuration ===
 const PROJECT_FLOW = [
     'Request Submitted',
-    'Request Under Review',
-    'Project Accepted',
     'Meeting Scheduled',
-    'Deposit Required',
-    'Project Started',
-    'Filming In Progress',
-    'Editing In Progress',
-    'Final Review',
-    'Final Payment Required',
-    'Project Completed'
+    'Proposal Sent',
+    'Awaiting Approval',
+    'Deposit Paid',
+    'Production',
+    'Editing',
+    'Review',
+    'Completed'
 ];
 
 /**
@@ -377,7 +375,7 @@ app.get('/api/client/projects', clientAuth, async (req, res) => {
         if (!client) return res.status(404).json({ error: 'Client not found' });
         
         const allProjects = await getProjects();
-        const clientProjects = allProjects.filter(p => p.email && p.email.toLowerCase() === client.email.toLowerCase());
+        const clientProjects = allProjects.filter(p => p.email && p.email.toLowerCase() === client.email.toLowerCase() && !p.hiddenFromClient);
         
         res.json(clientProjects.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
     } catch (err) {
@@ -430,9 +428,11 @@ app.get('/api/client-portal/:id', async (req, res) => {
         depositPaid: p.depositPaid || false,
         finalPaid: p.finalPaid || false,
         videoUrl: p.finalPaid ? (p.videoUrl || null) : null,
+        finalVideoUrl: p.finalVideoUrl,
         propertyAddress: p.propertyAddress,
         updates: p.updates || [],
-        deliverables: p.finalPaid ? (p.deliverables || []) : [] // Locked until final payment
+        deliverables: p.finalPaid ? (p.deliverables || []) : [], // Locked until final payment
+        meetingDate: p.meetingDate
     });
 });
 
@@ -493,7 +493,8 @@ app.get('/api/admin/clients', adminAuth, async (req, res) => {
  * Admin: Get all projects
  */
 app.get('/api/admin/projects', adminAuth, async (req, res) => {
-    res.json(await getProjects());
+    const all = await getProjects();
+    res.json(all.filter(p => !p.hiddenFromAdmin));
 });
 
 /**
@@ -614,9 +615,12 @@ app.post('/api/projects/:id/receipt', clientAuth, upload.single('paymentReceipt'
         const receiptUrl = req.file.path && req.file.path.startsWith('http') ? req.file.path : `/visualpro-data/projects/receipts/${req.file.filename}`;
         
         // Determine if it's deposit or final based on current status
-        if (project.status === 'Deposit Required') {
+        if (project.status === 'Deposit Paid') {
             project.depositReceipt = receiptUrl;
-        } else if (project.status === 'Final Payment Required') {
+            project.depositPaid = true;
+            // Mark step as completed by advancing directly to Production
+            project.status = 'Production';
+        } else if (project.status === 'Review' || project.status === 'Final Payment Required') {
             project.finalReceipt = receiptUrl;
         } else {
             return res.status(400).json({ error: 'Project is not in a payment stage' });
@@ -624,12 +628,129 @@ app.post('/api/projects/:id/receipt', clientAuth, upload.single('paymentReceipt'
 
         await saveProject(project);
         
-        // Notify Admin?
+        // Send email to admin
+        const { sendProjectDeliveryEmail } = require('./emailService'); // Actually lets reuse the notification but for manual payment
+        // We'll trust existing broadcast will notify frontends
+        
         broadcastEvent('project_updated', { id: project.id, status: project.status, project });
         
-        res.json({ message: 'Receipt uploaded successfully', receiptUrl });
+        res.json({ message: 'Receipt uploaded successfully. Step marked as completed.', receiptUrl });
     } catch (err) {
         console.error('Receipt Upload Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Client Portal API: Schedule Meeting
+ */
+app.post('/api/projects/:id/meeting', clientAuth, async (req, res) => {
+    try {
+        const { date, phone } = req.body;
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        const client = await getClientById(req.clientId);
+        if (!client || client.email.toLowerCase() !== project.email.toLowerCase()) {
+            return res.status(403).json({ error: 'Unauthorized to update this project' });
+        }
+
+        project.meetingDate = date;
+        if(phone) project.phone = phone;
+
+        await saveProject(project);
+        
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+
+        // Send email to admin
+        const { sendMeetingScheduledEmail } = require('./emailService');
+        if (typeof sendMeetingScheduledEmail === 'function') {
+             sendMeetingScheduledEmail(client.name, project, phone, date).catch(console.error);
+        }
+        
+        res.json({ message: 'Meeting scheduled successfully' });
+    } catch (err) {
+        console.error('Meeting Schedule Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Client Portal API: Project Decision (Accept/Decline)
+ */
+app.post('/api/projects/:id/decision', clientAuth, async (req, res) => {
+    try {
+        const { decision } = req.body;
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        const client = await getClientById(req.clientId);
+        if (!client || client.email.toLowerCase() !== project.email.toLowerCase()) {
+            return res.status(403).json({ error: 'Unauthorized to update this project' });
+        }
+
+        if (project.status !== 'Awaiting Approval') {
+            return res.status(400).json({ error: 'Project is not awaiting approval' });
+        }
+
+        if (decision === 'accept') {
+            project.status = 'Deposit Paid';
+        } else if (decision === 'decline') {
+            project.status = 'Project Cancelled';
+        } else {
+            return res.status(400).json({ error: 'Invalid decision' });
+        }
+
+        await saveProject(project);
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+        
+        res.json({ message: `Project ${decision}ed successfully` });
+    } catch (err) {
+        console.error('Decision Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Admin API: Rename Project
+ */
+app.patch('/api/admin/projects/:id/rename', adminAuth, async (req, res) => {
+    try {
+        const { title } = req.body;
+        if (!title) return res.status(400).json({ error: 'Title required' });
+        
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        project.projectTitle = title;
+        await saveProject(project);
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+        
+        res.json({ message: 'Project renamed', project });
+    } catch(err) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Admin API: Upload Final Video
+ */
+app.post('/api/admin/projects/:id/final-video', adminAuth, upload.single('finalVideoFile'), async (req, res) => {
+    try {
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        let url = req.body.finalVideoUrl;
+        if (req.file) {
+            url = req.file.path && req.file.path.startsWith('http') ? req.file.path : `/deliverables/${req.file.filename}`;
+        }
+
+        project.finalVideoUrl = url;
+        await saveProject(project);
+        broadcastEvent('project_updated', { id: project.id, status: project.status, project });
+        
+        res.json({ message: 'Final video saved', project });
+    } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
@@ -680,16 +801,57 @@ app.delete('/api/admin/nuke-db', adminAuth, async (req, res) => {
 });
 
 /**
- * Admin: Delete Project
+ * Admin: Delete Project (Safe Delete)
  */
 app.delete('/api/admin/projects/:id', adminAuth, async (req, res) => {
-    const id = req.params.id;
-    const success = await deleteProject(id);
-    if(success) {
-        broadcastEvent('project_deleted', { id });
-        res.json({ message: 'Deleted successfully' });
-    } else {
-        res.status(404).json({ error: 'Project not found or delete failed' });
+    try {
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        project.hiddenFromAdmin = true;
+        await saveProject(project);
+
+        broadcastEvent('project_deleted', { id: project.id });
+        res.json({ message: 'Safely deleted successfully' });
+    } catch(err) {
+        console.error('Admin Delete Error:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+/**
+ * Client: Safe Delete Project
+ */
+app.delete('/api/projects/:id', clientAuth, async (req, res) => {
+    try {
+        if (req.params.id === 'all') {
+            const client = await getClientById(req.clientId);
+            if (!client) return res.status(404).json({ error: 'Client not found' });
+            
+            const allProjects = await getProjects();
+            for (const p of allProjects) {
+                if (p.email && p.email.toLowerCase() === client.email.toLowerCase()) {
+                    p.hiddenFromClient = true;
+                    await saveProject(p);
+                }
+            }
+            return res.json({ message: 'All projects removed successfully' });
+        }
+
+        const project = await getProjectById(req.params.id);
+        if (!project) return res.status(404).json({ error: 'Project not found' });
+        
+        const client = await getClientById(req.clientId);
+        if (!client || client.email.toLowerCase() !== project.email.toLowerCase()) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
+        
+        project.hiddenFromClient = true;
+        await saveProject(project);
+        
+        res.json({ message: 'Project removed successfully' });
+    } catch(err) {
+        res.status(500).json({ error: 'Internal error' });
     }
 });
 

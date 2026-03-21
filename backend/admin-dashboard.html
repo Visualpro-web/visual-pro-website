@@ -428,6 +428,14 @@
             <h2 style="margin-top: 0; margin-bottom: 30px;">Manage Project <span id="m-p-id" class="text-gradient">---</span></h2>
             
             <div class="modal-item">
+                <label class="modal-label">Project Title</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="m-p-title" class="modal-input" placeholder="Edit project name...">
+                    <button class="btn btn-amber" style="padding:10px 20px; border-radius:12px;" onclick="renameProject()">Rename</button>
+                </div>
+            </div>
+
+            <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
                 <label class="modal-label">Post New Status Update</label>
                 <div style="display: flex; gap: 10px;">
                     <input type="text" id="m-update-msg" class="modal-input" placeholder="e.g. Filming has started! (Saves on Update)">
@@ -448,6 +456,17 @@
                     </div>
                 </div>
                 <button class="btn btn-amber" style="width:100%; border:1px solid rgba(255,123,0,0.5);" onclick="updatePricing()">Update Price/Discount</button>
+            </div>
+
+            <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
+                <label class="modal-label">Final Delivery Video</label>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0;">Provide a direct video link OR upload the final MP4 file.</p>
+                <div style="display: flex; gap: 10px; align-items:flex-start; margin-bottom:15px;">
+                    <input type="text" id="m-final-video-url" class="modal-input" placeholder="https://vimeo.com/..." style="flex:2">
+                    <span style="color:var(--text-muted); align-self:center; font-size:0.8rem;">OR</span>
+                    <input type="file" id="m-final-video-file" class="modal-input" accept="video/*" style="flex:1.5; background:transparent; border:1px dashed var(--border-light); padding:10px;">
+                </div>
+                <button class="btn btn-amber" style="width:100%; border:1px solid rgba(255,123,0,0.5);" onclick="uploadFinalVideo()">Save Final Video</button>
             </div>
 
             <div class="modal-item" style="border-top: 1px solid var(--border-light); padding-top: 20px; margin-top: 20px;">
@@ -642,32 +661,30 @@
         };
 
         const getStatusClass = (status) => {
-            if (['Request Submitted', 'Request Under Review'].includes(status)) return 'status-pending';
-            if (['Project Completed'].includes(status)) return 'status-completed';
+            if (['Request Submitted', 'Meeting Scheduled'].includes(status)) return 'status-pending';
+            if (['Completed'].includes(status)) return 'status-completed';
             if (['Project Rejected'].includes(status)) return 'status-rejected';
             return 'status-active';
         };
 
         const belongsToView = (p, view) => {
-            if (view === 'Pending') return ['Request Submitted', 'Request Under Review'].includes(p.status);
-            if (view === 'Active') return !['Request Submitted', 'Request Under Review', 'Project Completed', 'Project Rejected', 'Project Cancelled'].includes(p.status);
-            if (view === 'Completed') return p.status === 'Project Completed';
+            if (view === 'Pending') return ['Request Submitted', 'Meeting Scheduled'].includes(p.status);
+            if (view === 'Active') return !['Request Submitted', 'Meeting Scheduled', 'Completed', 'Project Rejected', 'Project Cancelled'].includes(p.status);
+            if (view === 'Completed') return p.status === 'Completed';
             if (view === 'Rejected') return p.status === 'Project Rejected';
             if (view === 'Cancelled') return p.status === 'Project Cancelled';
             return false;
         };
 
         const NEXT_STEPS = {
-            'Request Submitted': 'Request Under Review',
-            'Request Under Review': 'Project Accepted',
-            'Project Accepted': 'Meeting Scheduled',
-            'Meeting Scheduled': 'Deposit Required',
-            'Deposit Required': 'Project Started',
-            'Project Started': 'Filming In Progress',
-            'Filming In Progress': 'Editing In Progress',
-            'Editing In Progress': 'Final Review',
-            'Final Review': 'Final Payment Required',
-            'Final Payment Required': 'Project Completed'
+            'Request Submitted': 'Meeting Scheduled',
+            'Meeting Scheduled': 'Proposal Sent',
+            'Proposal Sent': 'Awaiting Approval',
+            'Awaiting Approval': 'Deposit Paid',
+            'Deposit Paid': 'Production',
+            'Production': 'Editing',
+            'Editing': 'Review',
+            'Review': 'Completed'
         };
 
         const renderCards = () => {
@@ -727,6 +744,7 @@
                     </div>
                     <p><strong>Client:</strong> ${p.name || p.email}</p>
                     <p><strong>Type:</strong> ${p.projectType || p.videoType}</p>
+                    ${p.meetingDate ? `<p><strong>Meeting:</strong> ${new Date(p.meetingDate).toLocaleString()}</p>` : ''}
                     <p><strong>Price:</strong> $${p.price || 0} ${p.discount ? `<span style="color:var(--success); font-size:0.8rem;">(-$${p.discount})</span>` : ''}</p>
                     ${(p.depositReceipt || p.finalReceipt) ? `<div style="margin-top:10px; background:rgba(255,123,0,0.1); border:1px solid var(--amber-start); color:var(--amber-start); padding:5px 10px; border-radius:8px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -758,7 +776,7 @@
 
         const advanceStep = async (id, next, btn) => {
             let payload = { status: next };
-            if (next === 'Project Accepted') {
+            if (next === 'Proposal Sent' || next === 'Awaiting Approval') {
                 const price = prompt('Enter Total Project Price ($):');
                 if (!price) return;
                 payload.price = parseFloat(price);
@@ -781,8 +799,18 @@
             selectedProjectId = id;
             const p = allProjects.find(pro => pro.id === id);
             document.getElementById('m-p-id').textContent = id;
+            document.getElementById('m-p-title').value = p.projectTitle || p.name;
             document.getElementById('m-price').value = p.price || 0;
             document.getElementById('m-discount').value = p.discount || 0;
+            
+            document.getElementById('m-final-video-url').value = p.finalVideoUrl && !p.finalVideoUrl.startsWith('/deliverables') ? p.finalVideoUrl : '';
+            if (p.finalVideoUrl && p.finalVideoUrl.startsWith('/deliverables')) {
+                document.getElementById('m-final-video-url').placeholder = "(A file is currently uploaded)";
+            } else {
+                document.getElementById('m-final-video-url').placeholder = "https://vimeo.com/...";
+            }
+            document.getElementById('m-final-video-file').value = '';
+
             document.getElementById('manage-modal').style.display = 'flex';
             
             const list = document.getElementById('m-deliverables-list');
@@ -793,8 +821,8 @@
             // Payment Verification Section
             const verifySection = document.getElementById('m-payment-verify-section');
             const receiptContainer = document.getElementById('m-receipt-container');
-            const isDepositStage = p.status === 'Deposit Required';
-            const isFinalStage = p.status === 'Final Payment Required';
+            const isDepositStage = p.status === 'Deposit Paid' || p.status === 'Production';
+            const isFinalStage = p.status === 'Review' || p.status === 'Completed';
             const currentReceipt = isDepositStage ? p.depositReceipt : p.finalReceipt;
 
             if ((isDepositStage || isFinalStage) && currentReceipt) {
@@ -924,6 +952,56 @@
                 console.error('Update Request Error:', err);
                 alert('Update Failed - Connection Error'); 
             }
+        };
+
+        const renameProject = async () => {
+            const title = document.getElementById('m-p-title').value;
+            if (!title) return alert('Title required');
+            try {
+                const res = await fetch(`/api/admin/projects/${selectedProjectId}/rename`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer 01270101' },
+                    body: JSON.stringify({ title })
+                });
+                if(res.ok) { alert('Project renamed successfully'); fetchData(); }
+                else alert('Failed to rename project');
+            } catch(e) { console.error(e); }
+        };
+
+        const uploadFinalVideo = async () => {
+            const urlInput = document.getElementById('m-final-video-url').value;
+            const fileInput = document.getElementById('m-final-video-file').files[0];
+
+            if (!urlInput && !fileInput) return alert('Please provide a URL or select a video file.');
+            if (urlInput && fileInput) return alert('Please provide EITHER a URL OR a file, not both.');
+
+            const fd = new FormData();
+            if (urlInput) fd.append('finalVideoUrl', urlInput);
+            if (fileInput) fd.append('finalVideoFile', fileInput);
+
+            document.getElementById('m-final-video-url').disabled = true;
+            document.getElementById('m-final-video-file').disabled = true;
+
+            try {
+                const btn = document.querySelector('button[onclick="uploadFinalVideo()"]');
+                const origText = btn.textContent;
+                btn.textContent = 'Uploading...';
+                
+                const res = await fetch(`/api/admin/projects/${selectedProjectId}/final-video`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer 01270101' },
+                    body: fd
+                });
+                if(res.ok) {
+                    alert('Final video saved successfully!');
+                    fetchData();
+                } else alert('Failed to save final video.');
+                
+                btn.textContent = origText;
+            } catch(e) { console.error(e); }
+            
+            document.getElementById('m-final-video-url').disabled = false;
+            document.getElementById('m-final-video-file').disabled = false;
         };
 
         const updateStatus = async (id, status) => {

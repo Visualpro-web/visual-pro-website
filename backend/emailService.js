@@ -224,8 +224,38 @@ async function sendProjectDeliveryEmail(client, project) {
     await sendEmail(client.email, subject, wrapEmailTemplate(content, project.id), 'Project Delivered');
 }
 
+const sendMeetingScheduledEmail = async (clientName, project, phone, date) => {
+    const adminEmail = process.env.ADMIN_EMAIL || 'munelstg0@gmail.com';
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 10000}`;
+    
+    const adminSubject = `Meeting Scheduled: ${clientName} – VP`;
+    const meetingDateObj = new Date(date);
+    const dateStr = meetingDateObj.toLocaleString();
+
+    let adminContent = `
+        <h2 style="margin-top:0; color:#fff;">New Meeting Scheduled</h2>
+        <div style="text-align: left; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <p style="margin: 5px 0;"><strong>Client Name:</strong> ${clientName}</p>
+            <p style="margin: 5px 0;"><strong>Project/Type:</strong> ${project.projectTitle || project.projectType || 'Cinematic Video Production'}</p>
+            ${phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${phone}</p>` : ''}
+            <p style="margin: 5px 0;"><strong>Selected Date & Time:</strong> ${dateStr}</p>
+        </div>
+        <p style="margin-top: 20px;">
+            <a href="https://calendar.google.com/calendar/r/eventedit?text=Meeting+with+${encodeURIComponent(clientName)}+-+Visual+Pro&details=Project:+${encodeURIComponent(project.projectTitle || project.projectType || 'Video')}" style="padding: 10px 20px; background: #FFB000; color:#000; text-decoration:none; border-radius: 8px; font-weight:bold;">Add to Calendar</a>
+        </p>
+        <p style="margin-top: 30px;"><a href="${baseUrl}/admin-dashboard" style="color: #FFB000; text-decoration: none; font-weight: 600;">Open Dashboard &rarr;</a></p>
+    `;
+
+    try {
+        await sendEmail(adminEmail, adminSubject, wrapEmailTemplate(adminContent, project.id), 'meeting scheduled (admin)');
+    } catch (err) {
+        console.error('Error sending meeting emails:', err.message);
+    }
+};
+
 module.exports = {
     sendNewRequestEmails,
     sendStatusUpdateEmail,
-    sendProjectDeliveryEmail
+    sendProjectDeliveryEmail,
+    sendMeetingScheduledEmail
 };
