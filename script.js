@@ -1,4 +1,33 @@
-document.addEventListener('DOMContentLoaded', () => {
+// Load Vimeo Player API
+const loadVimeoScript = () => {
+    return new Promise((resolve) => {
+        if (window.Vimeo) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://player.vimeo.com/api/player.js';
+        script.onload = resolve;
+        document.head.appendChild(script);
+    });
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadVimeoScript();
+
+    // Initialize Hero Background Video
+    const heroVimeoBg = document.querySelector('.vimeo-background');
+    if (heroVimeoBg && window.Vimeo) {
+        const heroPlayer = new Vimeo.Player(heroVimeoBg, {
+            id: heroVimeoBg.dataset.vimeoId,
+            background: true,
+            autoplay: true,
+            loop: true,
+            muted: true,
+            responsive: true,
+            dnt: true
+        });
+    }
     // Reveal Animations on Scroll
     const reveals = document.querySelectorAll('.reveal');
     
@@ -319,13 +348,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // --- Improved Scroll-Driven Showcase Logic ---
+    // --- Improved Scroll-Driven Showcase Logic with Vimeo ---
     const showcaseItems = document.querySelectorAll('.showcase-item');
-    
-    if (showcaseItems.length > 0) {
+    const vimeoPlayers = new Map();
+
+    if (showcaseItems.length > 0 && window.Vimeo) {
+        showcaseItems.forEach(item => {
+            const container = item.querySelector('.vimeo-container');
+            if (container) {
+                const player = new Vimeo.Player(container, {
+                    id: container.dataset.vimeoId,
+                    background: true,
+                    autoplay: false,
+                    loop: true,
+                    muted: true,
+                    responsive: true,
+                    dnt: true
+                });
+                vimeoPlayers.set(item.id, player);
+            }
+        });
+
         const showcaseObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const id = entry.target.id;
+                const player = vimeoPlayers.get(id);
+                
                 if (entry.isIntersecting) {
-                    // Gradual parallax effects based on intersectionRatio
                     const ratio = entry.intersectionRatio;
                     const info = entry.target.querySelector('.project-info');
                     const videoCont = entry.target.querySelector('.video-container');
@@ -335,35 +384,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (ratio > 0.3) {
                         entry.target.classList.add('active');
-                        const video = entry.target.querySelector('video');
-                        if (video && video.paused) video.play().catch(e => console.log('Autoplay blocked', e));
+                        if (player) player.play().catch(e => console.log('Vimeo play blocked', e));
                     } else if (ratio < 0.2) {
                         entry.target.classList.remove('active');
-                        const video = entry.target.querySelector('video');
-                        if (video) video.pause();
+                        if (player) player.pause();
                     }
                 }
+            });
         }, {
-            threshold: [0.1, 0.3, 0.5, 0.7, 0.9], // Multi-threshold for more granular tracking
+            threshold: [0.1, 0.3, 0.5, 0.7, 0.9],
             rootMargin: '0px'
         });
 
         showcaseItems.forEach(item => {
             showcaseObserver.observe(item);
-            
-            // Add video error handling to ensure images show through
-            const video = item.querySelector('video');
-            if (video) {
-                video.addEventListener('error', () => {
-                    console.warn('Video failed to load, falling back to image.');
-                    video.style.opacity = '0'; // Hide broken video to show image behind
-                });
-                
-                // Ensure video is visible only when playing or loaded
-                video.addEventListener('playing', () => {
-                    video.style.opacity = '1';
-                });
-            }
         });
     }
 
@@ -395,44 +429,69 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Auto-play/pause videos in grid on hover
+    // Auto-play/pause Vimeo videos in grid on hover
+    const gridPlayers = new Map();
     portfolioCards.forEach(card => {
-        const video = card.querySelector('.card-video');
-        card.addEventListener('mouseenter', () => {
-            if (video) video.play().catch(e => console.log('Autoplay blocked', e));
-        });
-        card.addEventListener('mouseleave', () => {
-            if (video) {
-                video.pause();
-                video.currentTime = 0;
-            }
-        });
+        const wrapper = card.querySelector('.vimeo-card-wrapper');
+        if (wrapper && window.Vimeo) {
+            const player = new Vimeo.Player(wrapper, {
+                id: wrapper.dataset.vimeoId,
+                background: true,
+                autoplay: false,
+                loop: true,
+                muted: true,
+                responsive: true,
+                dnt: true
+            });
+            gridPlayers.set(card, player);
+            
+            card.addEventListener('mouseenter', () => {
+                player.play().catch(e => console.log('Grid vimeo play blocked', e));
+            });
+            card.addEventListener('mouseleave', () => {
+                player.pause();
+                player.setCurrentTime(0);
+            });
+        }
     });
 
-    // --- Fullscreen Video Player Modal ---
+    // --- Fullscreen Vimeo Player Modal ---
     const videoModal = document.getElementById('video-player-modal');
-    if (videoModal) {
-        const modalVideo = videoModal.querySelector('.modal-main-video');
+    if (videoModal && window.Vimeo) {
         const modalTitle = videoModal.querySelector('.modal-title');
         const modalDesc = videoModal.querySelector('.modal-description');
         const videoModalClose = document.querySelector('.video-modal-close');
         const videoModalOverlay = document.querySelector('.video-modal-overlay');
+        const modalPlayerContainer = document.getElementById('modal-vimeo-player');
+        
+        let modalPlayer = null;
 
         const openVideoModal = (projectData) => {
-            modalVideo.src = projectData.videoSrc;
             modalTitle.textContent = projectData.title;
             modalDesc.textContent = projectData.description;
             
+            // Re-create or load Vimeo player in modal
+            if (modalPlayer) {
+                modalPlayer.loadVideo(projectData.vimeoId).then(() => {
+                    modalPlayer.play();
+                });
+            } else {
+                modalPlayer = new Vimeo.Player(modalPlayerContainer, {
+                    id: projectData.vimeoId,
+                    autoplay: true,
+                    responsive: true,
+                    controls: true
+                });
+            }
+            
             videoModal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            modalVideo.play().catch(e => console.log('Modal video play blocked', e));
         };
 
         const closeVideoModal = () => {
             videoModal.classList.remove('active');
             document.body.style.overflow = '';
-            modalVideo.pause();
-            modalVideo.src = '';
+            if (modalPlayer) modalPlayer.pause();
         };
 
         if (videoModalClose) videoModalClose.addEventListener('click', closeVideoModal);
@@ -441,13 +500,13 @@ document.addEventListener('DOMContentLoaded', () => {
         portfolioCards.forEach(card => {
             card.addEventListener('click', () => {
                 const title = card.querySelector('h4').textContent;
-                const videoSrc = card.querySelector('video source').src;
+                const vimeoId = card.querySelector('.vimeo-card-wrapper').dataset.vimeoId;
                 const categoryMeta = card.querySelector('.card-meta').textContent;
                 
                 openVideoModal({
                     title: title,
                     description: `A premium ${categoryMeta} project showcasing cinematic excellence and professional storytelling.`,
-                    videoSrc: videoSrc
+                    vimeoId: vimeoId
                 });
             });
         });
@@ -455,13 +514,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showcaseItems.forEach(item => {
             item.addEventListener('click', () => {
                 const title = item.querySelector('h3').textContent;
-                const videoSrc = item.querySelector('video source').src;
+                const vimeoId = item.querySelector('.vimeo-container').dataset.vimeoId;
                 const desc = item.querySelector('.description').textContent;
 
                 openVideoModal({
                     title: title,
                     description: desc,
-                    videoSrc: videoSrc
+                    vimeoId: vimeoId
                 });
             });
         });

@@ -76,10 +76,8 @@
 
     <!-- Cinematic Portfolio Hero -->
     <section id="portfolio-hero" class="portfolio-hero">
-        <div class="video-bg static-photo-bg">
-            <img src="assets/cinematic_hero.png" alt="Visual Pro Cinematic Production" class="cinematic-hero-img">
-            <div class="overlay-amber-glow"></div>
-        </div>
+            <div class="vimeo-background" data-vimeo-id="1175570141"></div>
+            <!-- <img src="assets/cinematic_hero.png" alt="Visual Pro Cinematic Production" class="cinematic-hero-img"> -->
         <div class="portfolio-hero-content container">
             <h2 class="fade-in-up" data-en="Visual Pro Portfolio" data-es="Portafolio Visual Pro">Visual Pro Portfolio</h2>
             <p class="fade-in-up delay-1" data-en="Cinematic Real Estate & Social Media Content" data-es="Contenido Cinemático Inmobiliario y Redes Sociales">Cinematic Real Estate & Social Media Content</p>
@@ -92,11 +90,8 @@
         <div class="scroll-showcase-container">
             <!-- Project 1 -->
             <div class="showcase-item" id="project-1">
-                <div class="video-container">
+                <div class="video-container vimeo-container" data-vimeo-id="1175570141">
                     <img src="assets/luxury_apartment_hero.png" alt="Luxury Apartment Showcase" class="showcase-image">
-                    <video muted loop playsinline class="showcase-video" poster="assets/luxury_apartment_hero.png">
-                        <!-- <source src="assets/project1_preview.mp4" type="video/mp4"> -->
-                    </video>
                 </div>
                 <div class="project-info container">
                     <h3 data-en="Luxury Apartment Showcase" data-es="Exhibición de Apartamento de Lujo">Luxury Apartment Showcase</h3>
@@ -108,11 +103,8 @@
 
             <!-- Project 2 -->
             <div class="showcase-item" id="project-2">
-                <div class="video-container">
+                <div class="video-container vimeo-container" data-vimeo-id="1175570141">
                     <img src="assets/brand_storytelling.png" alt="Brand Storytelling" class="showcase-image">
-                    <video muted loop playsinline class="showcase-video" poster="assets/brand_storytelling.png">
-                        <!-- <source src="assets/project2_preview.mp4" type="video/mp4"> -->
-                    </video>
                 </div>
                 <div class="project-info container">
                     <h3 data-en="Brand Storytelling" data-es="Narrativa de Marca">Brand Storytelling</h3>
@@ -124,11 +116,8 @@
             
             <!-- Project 3 -->
             <div class="showcase-item" id="project-3">
-                <div class="video-container">
+                <div class="video-container vimeo-container" data-vimeo-id="1175570141">
                     <img src="assets/lifestyle_reels.png" alt="Lifestyle Reels" class="showcase-image">
-                    <video muted loop playsinline class="showcase-video" poster="assets/lifestyle_reels.png">
-                        <!-- <source src="assets/project3_preview.mp4" type="video/mp4"> -->
-                    </video>
                 </div>
                 <div class="project-info container">
                     <h3 data-en="Lifestyle Reels" data-es="Reels de Estilo de Vida">Lifestyle Reels</h3>
@@ -156,11 +145,8 @@
             <div class="portfolio-grid-v2">
                 <!-- Grid items will be added here or dynamically via JS if many -->
                 <div class="portfolio-card-v2 reveal" data-category="real-estate">
-                    <div class="card-video-wrapper">
+                    <div class="card-video-wrapper vimeo-card-wrapper" data-vimeo-id="1175570141">
                         <img src="assets/work_real_estate.png" alt="Real Estate" class="card-image">
-                        <video muted loop playsinline class="card-video" poster="assets/luxury_apartment.png">
-                            <!-- <source src="assets/project1_preview.mp4" type="video/mp4"> -->
-                        </video>
                         <div class="card-glow-overlay"></div>
                         <div class="play-hint"><span>▶</span></div>
                     </div>
@@ -170,25 +156,19 @@
                     </div>
                 </div>
                 <div class="portfolio-card-v2 reveal delay-1" data-category="commercial">
-                    <div class="card-video-wrapper">
-                        <img src="assets/work_branding.png" alt="Modern Branding" class="card-image">
-                        <video muted loop playsinline class="card-video">
-                            <!-- <source src="assets/project2_preview.mp4" type="video/mp4"> -->
-                        </video>
+                    <div class="card-video-wrapper vimeo-card-wrapper" data-vimeo-id="1175570141">
+                        <img src="assets/work_branding.png" alt="GoJetcars Punta Cana" class="card-image">
                         <div class="card-glow-overlay"></div>
                         <div class="play-hint"><span>▶</span></div>
                     </div>
                     <div class="card-details">
-                        <h4 data-en="Modern Branding" data-es="Branding Moderno">Modern Branding</h4>
-                        <p class="card-meta">Santo Domingo, DR • Commercial</p>
+                        <h4 data-en="GoJetcars Punta Cana" data-es="GoJetcars Punta Cana">GoJetcars Punta Cana</h4>
+                        <p class="card-meta">Rio San Juan, DR • Commercial</p>
                     </div>
                 </div>
                 <div class="portfolio-card-v2 reveal delay-2" data-category="social-media">
-                    <div class="card-video-wrapper">
+                    <div class="card-video-wrapper vimeo-card-wrapper" data-vimeo-id="1175570141">
                         <img src="assets/work_social.png" alt="Tourism Campaign" class="card-image">
-                        <video muted loop playsinline class="card-video" poster="assets/luxury_mansion.png">
-                            <!-- <source src="assets/project3_preview.mp4" type="video/mp4"> -->
-                        </video>
                         <div class="card-glow-overlay"></div>
                         <div class="play-hint"><span>▶</span></div>
                     </div>
@@ -545,9 +525,7 @@
             <button class="video-modal-close">&times;</button>
             <div class="video-modal-body">
                 <div class="modal-video-container">
-                    <video controls class="modal-main-video">
-                        <source src="" type="video/mp4">
-                    </video>
+                    <div id="modal-vimeo-player"></div>
                 </div>
                 <div class="modal-project-details">
                     <h3 class="modal-title">Project Title</h3>

@@ -542,6 +542,7 @@
         let allClients = [];
         let sseConnection = null;
         let selectedProjectId = null;
+        let selectedClientEmail = null;
 
         // Check for biometric support on load
         document.addEventListener('DOMContentLoaded', async () => {
@@ -606,7 +607,6 @@
             };
         };
 
-        // Navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -616,6 +616,18 @@
                 renderCards();
             });
         });
+
+        const viewClientProjects = (email, name) => {
+            selectedClientEmail = email;
+            currentView = 'ClientProjects';
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            // Keep Clients nav button active
+            const clientsBtn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('data-view') === 'Clients');
+            if (clientsBtn) clientsBtn.classList.add('active');
+            
+            document.getElementById('view-title').innerHTML = `<span style="cursor:pointer; color:var(--text-muted);" onclick="document.querySelector('[data-view=\\'Clients\\']').click()">Client Database</span> &rsaquo; ${name}'s Projects`;
+            renderCards();
+        };
 
         const fetchData = async () => {
             try {
@@ -682,7 +694,7 @@
                         </div>
                         <div style="font-size:0.85rem; color:var(--text-muted);">Registered: ${new Date(c.createdAt).toLocaleDateString()}</div>
                         <div class="card-actions" style="margin-top:20px;">
-                            <button class="action-amber" onclick="alert('Viewing Client Projects is not implemented yet in this demo.')">View Projects</button>
+                            <button class="action-amber" onclick="viewClientProjects('${c.email}', '${c.name.replace(/'/g, "\\'")}')">View Projects</button>
                         </div>
                     `;
                     container.appendChild(card);
@@ -690,11 +702,17 @@
                 return;
             }
 
-            const filtered = allProjects.filter(p => belongsToView(p, currentView));
+            let filtered = [];
+            if (currentView === 'ClientProjects') {
+                filtered = allProjects.filter(p => p.email && p.email.toLowerCase() === selectedClientEmail.toLowerCase());
+            } else {
+                filtered = allProjects.filter(p => belongsToView(p, currentView));
+            }
+            
             filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             if (filtered.length === 0) {
-                container.innerHTML = `<p style="color:var(--text-muted);">No projects here.</p>`;
+                container.innerHTML = `<p style="color:var(--text-muted);">${currentView === 'ClientProjects' ? 'No projects found for this client.' : 'No projects here.'}</p>`;
                 return;
             }
 

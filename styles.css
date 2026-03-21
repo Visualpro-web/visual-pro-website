@@ -410,6 +410,32 @@ img {
     transform: scale(1);
 }
 
+.vimeo-background, .vimeo-container, .vimeo-card-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #000;
+    overflow: hidden;
+}
+
+.vimeo-background iframe, 
+.vimeo-container iframe, 
+.vimeo-card-wrapper iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+/* Background video might need to be larger to avoid bars if aspect ratio differs */
+.vimeo-background iframe {
+    width: 115%;
+    height: 115%;
+}
+
 .showcase-video, .showcase-image {
     width: 100%;
     height: 100%;
@@ -423,11 +449,6 @@ img {
     top: 0;
     left: 0;
     z-index: 0;
-}
-
-.showcase-video {
-    position: relative;
-    z-index: 1;
 }
 
 .project-info {
@@ -685,10 +706,9 @@ img {
     justify-content: center;
 }
 
-.modal-main-video {
+#modal-vimeo-player {
     width: 100%;
-    height: auto;
-    max-height: 80vh;
+    aspect-ratio: 16/9;
 }
 
 .modal-project-details {
