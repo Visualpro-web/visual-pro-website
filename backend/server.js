@@ -766,10 +766,10 @@ app.patch('/api/admin/projects/:id/verify-payment', adminAuth, async (req, res) 
 
         if (type === 'deposit') {
             project.depositPaid = true;
-            project.status = 'Project Started';
+            project.status = 'Production';
         } else if (type === 'final') {
             project.finalPaid = true;
-            project.status = 'Project Completed';
+            project.status = 'Completed';
         } else {
             return res.status(400).json({ error: 'Invalid payment type' });
         }

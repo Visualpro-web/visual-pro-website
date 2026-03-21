@@ -995,7 +995,7 @@
                 if(res.ok) {
                     alert('Final video saved successfully!');
                     fetchData();
-                } else alert('Failed to save final video.');
+                } else { const txt = await res.text(); alert('Upload Failed. Error: ' + txt); }
                 
                 btn.textContent = origText;
             } catch(e) { console.error(e); }
